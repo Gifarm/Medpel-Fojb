@@ -21,14 +21,18 @@ import {
   X,
 } from "lucide-react";
 
-// Color Palette Constants based on user input
 const COLORS = {
-  primary: "#12a44d", // Hijau Utama
-  secondary: "#d7dd21", // Kuning Medpel
-  accent: "#2b529b", // Biru Formal
-  textDark: "#1a1a1a",
-  textLight: "#fefefe",
-  danger: "#b76979",
+  primary: "#FCC200", // kuning utama
+  primarySoft: "#FDCE33",
+  primaryLight: "#FDD85C",
+
+  blueDark: "#233982",
+  blue: "#4F619B",
+  blueLight: "#7281AF",
+
+  black: "#1B1B1B",
+  gray: "#C4C4C4",
+  white: "#FFFFFF",
 };
 
 const App = () => {
@@ -78,7 +82,7 @@ const App = () => {
   ];
 
   const navItems = [
-    { name: "Beranda", icon: LayoutDashboard },
+    { name: "Beranda", icon: LayoutDashboard, COLORS: "primary" },
     { name: "Eksplorasi", icon: Search },
     { name: "Jurnalisme", icon: Newspaper, role: "jurnalis" },
     { name: "Panel Admin", icon: Settings, role: "admin" },
@@ -327,7 +331,7 @@ const App = () => {
                           <BarChart3 size={14} /> {article.views}
                         </span>
                       </div>
-                      <button className="flex items-center gap-2 text-sm font-bold text-[#12a44d] group/btn">
+                      <button className="flex items-center gap-2 text-sm font-bold text-[#FCC200] group/btn">
                         Baca Selengkapnya
                         <ChevronRight
                           size={16}
