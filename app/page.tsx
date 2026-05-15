@@ -93,11 +93,11 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] font-sans text-gray-900 selection:bg-green-100">
+    <div className="min-h-screen bg-[#f8faf9] font-sans text-gray-900 selection:bg-yellow-100">
       {/* Dynamic Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#d7dd21]/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#12a44d]/10 blur-[120px]" />
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#FDCE33]/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#4F619B]/10 blur-[120px]" />
       </div>
 
       {/* Custom Navigation Bar */}
@@ -105,13 +105,16 @@ const App = () => {
         className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "py-3 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100" : "py-6 bg-transparent"}`}
       >
         <div className="container mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* <div className="w-10 h-10 bg-gradient-to-br from-[#12a44d] to-[#d7dd21] rounded-xl flex items-center justify-center shadow-lg shadow-green-200">
-              <span className="text-white font-bold text-xl">M</span>
-            </div> */}
+          <div className="flex items-center gap-3">
+            {/* Logo Image */}
+            <img
+              src="/medpel.png"
+              alt="MedPel Logo"
+              className="w-12 h-12 object-contain"
+            />
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-[#2b529b]">
-                Med<span className="text-[#12a44d]">Pel</span>
+              <h1 className="text-xl font-bold tracking-tight text-[#233982]">
+                Med<span className="text-[#FCC200]">Pel</span>
               </h1>
               <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gray-400 leading-none">
                 Media Pelajar
@@ -130,7 +133,7 @@ const App = () => {
                 {activeTab === item.name && (
                   <motion.div
                     layoutId="nav-active"
-                    className="absolute inset-0 bg-gradient-to-r from-[#12a44d] to-[#11a44c] rounded-xl shadow-md"
+                    className="absolute inset-0 bg-gradient-to-r from-[#233982] to-[#4F619B] rounded-xl shadow-md"
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
@@ -143,7 +146,7 @@ const App = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 focus-within:ring-2 ring-[#12a44d]/20 transition-all">
+            <div className="hidden sm:flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 focus-within:ring-2 ring-[#FCC200]/20 transition-all">
               <Search size={16} className="text-gray-400" />
               <input
                 type="text"
@@ -154,7 +157,7 @@ const App = () => {
 
             <div className="relative group">
               <button className="flex items-center gap-2 p-1 pr-3 bg-white border border-gray-200 rounded-full hover:shadow-md transition-all">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#2b529b] to-[#2c5298] flex items-center justify-center text-white text-xs font-bold">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-xs font-bold">
                   {userRole === "visitor"
                     ? "V"
                     : userRole === "jurnalis"
@@ -211,7 +214,7 @@ const App = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-10">
                     <div className="flex gap-2 mb-4">
-                      <span className="px-4 py-1 bg-[#d7dd21] text-[#1a1a1a] text-xs font-bold rounded-full">
+                      <span className="px-4 py-1 bg-[#FCC200] text-[#1B1B1B] text-xs font-bold rounded-full">
                         SOROTAN UTAMA
                       </span>
                       <span className="px-4 py-1 bg-white/20 backdrop-blur-md text-white text-xs font-bold rounded-full">
@@ -238,7 +241,7 @@ const App = () => {
               <div className="lg:col-span-4 flex flex-col gap-6">
                 <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/50 flex-1">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-bold text-xl text-[#2b529b]">
+                    <h3 className="font-bold text-xl text-[#233982]">
                       Topik Hangat
                     </h3>
                     <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center">
@@ -256,7 +259,7 @@ const App = () => {
                         key={idx}
                         className="p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100 cursor-pointer group"
                       >
-                        <p className="font-bold text-[#12a44d] group-hover:translate-x-1 transition-transform">
+                        <p className="font-bold text-[#FCC200] group-hover:translate-x-1 transition-transform">
                           {item.tag}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
@@ -265,7 +268,7 @@ const App = () => {
                       </div>
                     ))}
                   </div>
-                  <button className="w-full mt-6 py-3 bg-[#f8faf9] text-[#2b529b] font-bold rounded-xl hover:bg-gray-100 transition-colors">
+                  <button className="w-full mt-6 py-3 bg-[#f8faf9] text-[#233982] font-bold rounded-xl hover:bg-gray-100 transition-colors">
                     Lihat Semua Topik
                   </button>
                 </div>
@@ -278,13 +281,13 @@ const App = () => {
                 <h3 className="text-2xl font-bold text-gray-800">
                   Berita Terbaru
                 </h3>
-                <div className="h-1.5 w-12 bg-gradient-to-r from-[#12a44d] to-[#d7dd21] rounded-full mt-2" />
+                <div className="h-1.5 w-12 bg-gradient-to-r from-[#FCC200] to-[#FDCE33] rounded-full mt-2" />
               </div>
               <div className="flex gap-2">
                 {["Semua", "Berita", "Prestasi", "Tips"].map((cat) => (
                   <button
                     key={cat}
-                    className="px-5 py-2 rounded-full text-xs font-bold border border-gray-200 hover:border-[#12a44d] transition-all"
+                    className="px-5 py-2 rounded-full text-xs font-bold border border-gray-200 hover:border-[#FCC200] transition-all"
                   >
                     {cat}
                   </button>
@@ -308,11 +311,11 @@ const App = () => {
                       alt={article.title}
                     />
                     <div className="absolute top-4 left-4">
-                      <span className="px-4 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black text-[#12a44d] uppercase shadow-sm">
+                      <span className="px-4 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black text-[#FCC200] uppercase shadow-sm">
                         {article.category}
                       </span>
                     </div>
-                    <button className="absolute bottom-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-600 hover:text-[#12a44d] shadow-sm transition-colors">
+                    <button className="absolute bottom-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-600 hover:text-[#FCC200] shadow-sm transition-colors">
                       <Bookmark size={18} />
                     </button>
                   </div>
@@ -322,7 +325,7 @@ const App = () => {
                       <span className="w-1 h-1 bg-gray-300 rounded-full" />
                       <span>{article.date}</span>
                     </div>
-                    <h4 className="text-xl font-bold text-gray-800 mb-4 group-hover:text-[#2b529b] transition-colors leading-tight">
+                    <h4 className="text-xl font-bold text-gray-800 mb-4 group-hover:text-[#233982] transition-colors leading-tight">
                       {article.title}
                     </h4>
                     <div className="flex items-center justify-between pt-6 border-t border-gray-50">
@@ -353,7 +356,7 @@ const App = () => {
             animate={{ opacity: 1 }}
             className="space-y-8"
           >
-            <div className="bg-gradient-to-r from-[#2b529b] to-[#2c5298] p-10 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+            <div className="bg-gradient-to-r from-[#233982] to-[#4F619B] p-10 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
               <div>
                 <h2 className="text-3xl font-bold mb-2">
                   Halo, Kontributor! 👋
@@ -362,7 +365,7 @@ const App = () => {
                   Siap untuk membagikan informasi bermanfaat hari ini?
                 </p>
               </div>
-              <button className="px-8 py-4 bg-[#d7dd21] text-[#1a1a1a] font-black rounded-2xl flex items-center gap-3 hover:scale-105 transition-transform shadow-lg shadow-yellow-400/20">
+              <button className="px-8 py-4 bg-[#FCC200] text-[#1B1B1B] font-black rounded-2xl flex items-center gap-3 hover:scale-105 transition-transform shadow-lg shadow-yellow-400/20">
                 <PlusCircle size={20} />
                 BUAT ARTIKEL BARU
               </button>
@@ -374,19 +377,19 @@ const App = () => {
                   label: "Total Pembaca",
                   val: "45.2k",
                   icon: Users,
-                  color: "text-blue-500",
+                  color: "text-[#4F619B]",
                 },
                 {
                   label: "Artikel Publish",
                   val: "12",
                   icon: Newspaper,
-                  color: "text-green-500",
+                  color: "text-[#FCC200]",
                 },
                 {
                   label: "Interaksi",
                   val: "1.2k",
                   icon: Bell,
-                  color: "text-yellow-500",
+                  color: "text-[#FDCE33]",
                 },
               ].map((stat, i) => (
                 <div
@@ -455,7 +458,7 @@ const App = () => {
                           1.240
                         </td>
                         <td className="px-8 py-6">
-                          <button className="p-2 text-gray-400 hover:text-blue-500 transition-colors">
+                          <button className="p-2 text-gray-400 hover:text-[#4F619B] transition-colors">
                             <Settings size={16} />
                           </button>
                         </td>
@@ -485,7 +488,7 @@ const App = () => {
                 ].map((item, i) => (
                   <button
                     key={i}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${i === 0 ? "bg-green-50 text-[#12a44d]" : "text-gray-400 hover:bg-gray-50"}`}
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${i === 0 ? "bg-yellow-50 text-[#FCC200]" : "text-gray-400 hover:bg-gray-50"}`}
                   >
                     {item}
                   </button>
@@ -494,21 +497,21 @@ const App = () => {
             </aside>
             <div className="lg:col-span-3 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-4 border-l-[#12a44d]">
+                <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-4 border-l-[#FCC200]">
                   <h4 className="text-gray-400 text-xs font-black uppercase mb-2">
                     User Aktif
                   </h4>
                   <p className="text-4xl font-black text-gray-800">1.402</p>
-                  <div className="mt-4 flex items-center gap-2 text-green-500 text-xs font-bold">
+                  <div className="mt-4 flex items-center gap-2 text-[#FCC200] text-xs font-bold">
                     <TrendingUp size={14} /> +12% dari bulan lalu
                   </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-4 border-l-[#d7dd21]">
+                <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-4 border-l-[#FDCE33]">
                   <h4 className="text-gray-400 text-xs font-black uppercase mb-2">
                     Konten Butuh Review
                   </h4>
                   <p className="text-4xl font-black text-gray-800">08</p>
-                  <div className="mt-4 flex items-center gap-2 text-yellow-600 text-xs font-bold">
+                  <div className="mt-4 flex items-center gap-2 text-[#233982] text-xs font-bold">
                     Pending Approval
                   </div>
                 </div>
@@ -538,7 +541,7 @@ const App = () => {
                       key={i}
                       className="flex gap-4 items-start pb-4 border-b border-gray-50 last:border-0"
                     >
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
+                      <div className="w-2 h-2 bg-[#4F619B] rounded-full mt-2" />
                       <div>
                         <p className="text-sm text-gray-700">
                           <strong>{log.user}</strong> {log.act}
@@ -562,11 +565,11 @@ const App = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
-                {/* <div className="w-8 h-8 bg-[#12a44d] rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-[#FCC200] rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-lg">M</span>
-                </div> */}
-                <h1 className="text-lg font-bold tracking-tight text-[#2b529b]">
-                  Med<span className="text-[#12a44d]">Pel</span>
+                </div>
+                <h1 className="text-lg font-bold tracking-tight text-[#233982]">
+                  Med<span className="text-[#FCC200]">Pel</span>
                 </h1>
               </div>
               <p className="text-sm text-gray-500 leading-relaxed">
@@ -577,16 +580,16 @@ const App = () => {
             <div>
               <h4 className="font-bold text-gray-800 mb-6">Navigasi</h4>
               <ul className="space-y-4 text-sm text-gray-500">
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Tentang Kami
                 </li>
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Redaksi
                 </li>
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Kebijakan Privasi
                 </li>
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Kontak Kami
                 </li>
               </ul>
@@ -594,16 +597,16 @@ const App = () => {
             <div>
               <h4 className="font-bold text-gray-800 mb-6">Kategori</h4>
               <ul className="space-y-4 text-sm text-gray-500">
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Pendidikan
                 </li>
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Gaya Hidup
                 </li>
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Prestasi
                 </li>
-                <li className="hover:text-[#12a44d] cursor-pointer transition-colors">
+                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
                   Teknologi
                 </li>
               </ul>
@@ -619,7 +622,7 @@ const App = () => {
                   placeholder="Email Anda"
                   className="bg-transparent border-none outline-none text-xs px-3 w-full"
                 />
-                <button className="bg-[#12a44d] text-white p-2 rounded-lg">
+                <button className="bg-[#FCC200] text-[#1B1B1B] p-2 rounded-lg">
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -632,15 +635,15 @@ const App = () => {
             <div className="flex gap-6 text-gray-400">
               <Share2
                 size={18}
-                className="hover:text-[#2b529b] cursor-pointer transition-colors"
+                className="hover:text-[#233982] cursor-pointer transition-colors"
               />
               <Users
                 size={18}
-                className="hover:text-[#2b529b] cursor-pointer transition-colors"
+                className="hover:text-[#233982] cursor-pointer transition-colors"
               />
               <Bell
                 size={18}
-                className="hover:text-[#2b529b] cursor-pointer transition-colors"
+                className="hover:text-[#233982] cursor-pointer transition-colors"
               />
             </div>
           </div>
@@ -654,7 +657,7 @@ const App = () => {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-8 right-8 w-16 h-16 bg-[#12a44d] text-white rounded-full shadow-2xl flex items-center justify-center z-50 hover:rotate-90 transition-transform duration-500"
+            className="fixed bottom-8 right-8 w-16 h-16 bg-[#FCC200] text-[#1B1B1B] rounded-full shadow-2xl flex items-center justify-center z-50 hover:rotate-90 transition-transform duration-500"
           >
             <PlusCircle size={32} />
           </motion.button>
