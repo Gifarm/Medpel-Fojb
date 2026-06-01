@@ -9,279 +9,300 @@ import {
   EyeOff,
   ArrowRight,
   ShieldCheck,
-  ChevronLeft,
+  CheckCircle2,
   Sparkles,
-  Globe,
 } from "lucide-react";
 
 const COLORS = {
-  primary: "#12a44d", // Hijau Utama
-  secondary: "#d7dd21", // Kuning Lemon
-  navy: "#2b529b", // Navy
-  navyDeep: "#2c5298", // Navy Deep
-  bg: "#fefefe", // Putih Bersih
-  accent: "#b76979", // Accent Pinkish/Muted
+  primary: "#FCC200",
+  primarySoft: "#FDCE33",
+  primaryLight: "#FDD85C",
+  blueDark: "#233982",
+  blue: "#4F619B",
+  blueLight: "#7281AF",
+  black: "#1B1B1B",
+  gray: "#C4C4C4",
+  white: "#FFFFFF",
 };
+
+interface FormInputProps {
+  icon: React.ElementType;
+  label: string;
+  name: string;
+  type?: string;
+  placeholder?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  rightElement?: React.ReactNode;
+}
+
+// Komponen FormInput didefinisikan DI LUAR komponen App untuk mencegah error re-render
+const FormInput = ({
+  icon: Icon,
+  label,
+  name,
+  type = "text",
+  placeholder,
+  value,
+  onChange,
+  rightElement,
+}: FormInputProps) => (
+  <div className="space-y-2">
+    <label
+      htmlFor={name}
+      className="text-[11px] font-bold text-[#233982] uppercase tracking-wider ml-1"
+    >
+      {label}
+    </label>
+    <div className="relative group">
+      <Icon
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-[#C4C4C4] group-focus-within:text-[#FCC200] transition-colors duration-300"
+        size={18}
+      />
+      <input
+        id={name}
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`w-full bg-[#FFFFFF] text-[#1B1B1B] pl-10 border-2 border-[#F8FAF9] rounded-2xl py-3.5 text-sm font-medium 
+                   focus:bg-[#FFFEF5] focus:border-[#FCC200] focus:ring-4 focus:ring-[#FCC200]/10 outline-none transition-all duration-300 placeholder:text-[#C4C4C4]
+                   ${rightElement ? "pr-12" : "pr-4"}`}
+      />
+      {rightElement && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          {rightElement}
+        </div>
+      )}
+    </div>
+  </div>
+);
 
 const App = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  const handleLogin = (e: { preventDefault: () => void }) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulasi loading proses login
-    setTimeout(() => setIsLoading(false), 2000);
+
+    // Simulasi proses login (ganti dengan API call sesungguhnya)
+    setTimeout(() => {
+      setIsLoading(false);
+      // router.push('/dashboard'); // Contoh redirect
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-[#fefefe] flex items-center justify-center p-6 font-sans overflow-hidden relative">
-      {/* Background Ornaments */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#12a44d]/5 rounded-full blur-[100px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#d7dd21]/10 rounded-full blur-[100px]" />
+    <div className="min-h-screen bg-gradient-to-br from-[#FFFEF5] via-[#FFFFFF] to-[#F0F4FF] flex items-center justify-center p-4 md:p-8 font-sans overflow-hidden relative">
+      {/* Soft Background Ornaments */}
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#FCC200]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-[#4F619B]/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-[40%] left-[20%] w-[300px] h-[300px] bg-[#7281AF]/5 rounded-full blur-[80px] pointer-events-none" />
 
-      {/* Floating Elements for Aesthetic */}
-      {/* <motion.div
-        animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 4, repeat: Infinity }}
-        className="absolute top-20 left-20 text-[#12a44d]/20 hidden lg:block"
-      >
-        <Sparkles size={40} />
-      </motion.div> */}
-
-      <div className="w-full max-w-[1100px] bg-white rounded-[2.5rem] shadow-[0_20px_80px_rgba(0,0,0,0.06)] border border-gray-50 flex overflow-hidden relative z-10 min-h-[650px]">
-        {/* Left Side: Visual & Branding */}
-        <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-[#12a44d] via-[#11a44c] to-[#2b529b] p-12 flex-col justify-between relative overflow-hidden">
-          {/* Abstract Pattern Overlay */}
-          <div className="absolute inset-0 opacity-10">
-            <div
-              className="absolute top-0 left-0 w-full h-full"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-                backgroundSize: "40px 40px",
-              }}
-            />
-          </div>
+      <div className="w-full max-w-[1100px] bg-[#FFFFFF]/80 backdrop-blur-xl rounded-[3rem] shadow-[0_40px_100px_-20px_rgba(35,57,130,0.1)] border border-[#FFFFFF] flex overflow-hidden relative z-10 min-h-[650px]">
+        {/* --- LEFT SIDE: Clean Branding --- */}
+        <div className="hidden lg:flex w-[40%] bg-[#FFFFFF] p-12 flex-col justify-between relative overflow-hidden">
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-gradient-to-br from-[#FCC200]/20 to-[#FDCE33]/10 rounded-full blur-[60px]" />
+          <div className="absolute bottom-20 left-10 w-[150px] h-[150px] bg-gradient-to-tr from-[#4F619B]/10 to-transparent rounded-full blur-[40px]" />
 
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
-              {/* <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-[#12a44d] font-black text-xl">M</span>
-              </div> */}
-              <h1 className="text-white font-bold text-2xl tracking-tight">
-                MedPel <span className="text-[#d7dd21]">News</span>
-              </h1>
+              <div>
+                <h1 className="text-[#233982] font-bold text-2xl tracking-tight">
+                  MedPel
+                </h1>
+                <p className="text-[#C4C4C4] text-[10px] font-bold uppercase tracking-widest">
+                  Journalism Platform
+                </p>
+              </div>
             </div>
 
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.2 }}
+              className="space-y-6 mt-12"
             >
-              <h2 className="text-4xl font-black text-white leading-tight mb-4">
-                Suara Pendidikan,
-                <br />
-                <span className="text-[#d7dd21]">Masa Depan</span> Bangsa.
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FCC200]/10 rounded-full">
+                <Sparkles size={16} className="text-[#FCC200]" />
+                <span className="text-[11px] font-bold text-[#233982] uppercase tracking-wide">
+                  Secure Access
+                </span>
+              </div>
+              <h2 className="text-[#1B1B1B] text-4xl font-black leading-tight">
+                Selamat Datang <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FCC200] to-[#FDCE33]">
+                  Kembali
+                </span>
               </h2>
-              <p className="text-white/80 text-sm leading-relaxed max-w-sm">
+              <p className="text-[#6B7280] text-sm leading-relaxed max-w-xs">
                 Masuk ke ekosistem jurnalisme sekolah paling canggih. Kelola
-                konten, kolaborasi, dan publikasi dalam satu pintu.
+                konten, kolaborasi, dan publikasi dalam satu pintu yang aman.
               </p>
             </motion.div>
           </div>
 
           <div className="relative z-10">
-            <div className="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
-              <div className="w-10 h-10 rounded-full bg-[#d7dd21] flex items-center justify-center text-gray-900">
-                <ShieldCheck size={20} />
+            <div className="p-6 bg-gradient-to-br from-[#F8FAF9] to-[#F0F4FF] rounded-3xl border border-[#FFFFFF] shadow-sm flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FCC200] to-[#FDCE33] flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#FCC200]/20">
+                <ShieldCheck size={20} className="text-[#233982]" />
               </div>
               <div>
-                <p className="text-white text-xs font-bold">Secure Access</p>
-                <p className="text-white/60 text-[10px]">
-                  Enkripsi data standar industri jurnalisme.
+                <p className="text-[#233982] text-xs font-black mb-1">
+                  Enkripsi End-to-End
+                </p>
+                <p className="text-[#6B7280] text-[11px] leading-relaxed">
+                  Data kredensial Anda dilindungi dengan standar keamanan
+                  industri terkini.
                 </p>
               </div>
             </div>
           </div>
-
-          {/* Decorative Circle */}
-          <div className="absolute bottom-[-100px] right-[-50px] w-64 h-64 border-[40px] border-white/5 rounded-full" />
         </div>
 
-        {/* Right Side: Login Form */}
-        <div className="w-full lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center bg-white">
-          <div className="mb-10 text-center lg:text-left">
-            <div className="lg:hidden flex justify-center mb-6">
-              <div className="w-12 h-12 bg-[#12a44d] rounded-2xl flex items-center justify-center shadow-lg shadow-green-100">
-                <span className="text-white font-black text-2xl">M</span>
-              </div>
-            </div>
-            <h3 className="text-2xl font-black text-gray-800 mb-2">
-              Selamat Datang Kembali
-            </h3>
-            <p className="text-gray-400 text-sm">
-              Silakan masuk dengan kredensial MedPel Anda.
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email Field */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                Alamat Email
-              </label>
-              <div className="relative group">
-                <Mail
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#12a44d] transition-colors"
-                  size={18}
-                />
-                <input
-                  type="email"
-                  required
-                  placeholder="name@school.com"
-                  className="w-full bg-gray-50 text-black border-2 border-gray-50 rounded-2xl py-4 pl-12 pr-4 text-sm focus:bg-white focus:border-[#12a44d]/20 focus:ring-4 focus:ring-[#12a44d]/5 outline-none transition-all"
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                />
-              </div>
+        {/* --- RIGHT SIDE: Login Form --- */}
+        <div className="w-full lg:w-[60%] p-8 md:p-12 flex flex-col bg-[#FFFFFF]/50 justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md mx-auto"
+          >
+            <div className="mb-10 text-center lg:text-left">
+              <h3 className="text-3xl font-black text-[#1B1B1B] mb-2">
+                Masuk ke Akun
+              </h3>
+              <p className="text-[#6B7280] text-sm">
+                Silakan masukkan kredensial MedPel Anda untuk melanjutkan.
+              </p>
             </div>
 
-            {/* Password Field */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  Kata Sandi
+            <form onSubmit={handleLogin} className="space-y-6">
+              <FormInput
+                icon={Mail}
+                label="Alamat Email"
+                name="email"
+                type="email"
+                placeholder="nama@sekolah.sch.id"
+                value={formData.email}
+                onChange={handleInputChange}
+              />
+
+              <FormInput
+                icon={Lock}
+                label="Kata Sandi"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleInputChange}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[#C4C4C4] hover:text-[#233982] transition-colors duration-300 focus:outline-none"
+                    aria-label={
+                      showPassword
+                        ? "Sembunyikan kata sandi"
+                        : "Tampilkan kata sandi"
+                    }
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                }
+              />
+
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between pt-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="peer appearance-none w-5 h-5 border-2 border-[#F8FAF9] rounded-lg checked:bg-[#FCC200] checked:border-[#FCC200] transition-all cursor-pointer"
+                    />
+                    <CheckCircle2
+                      className="absolute text-[#233982] opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
+                      size={14}
+                      strokeWidth={3}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-[#6B7280] group-hover:text-[#233982] transition-colors">
+                    Ingat saya
+                  </span>
                 </label>
+
                 <a
-                  href="#"
-                  className="text-[10px] font-bold text-[#2b529b] hover:underline"
+                  href="/forgot-password"
+                  className="text-xs font-bold text-[#4F619B] hover:text-[#233982] hover:underline underline-offset-4 transition-colors"
                 >
-                  Lupa Sandi?
+                  Lupa Kata Sandi?
                 </a>
               </div>
-              <div className="relative group">
-                <Lock
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-[#12a44d] transition-colors"
-                  size={18}
-                />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder="••••••••"
-                  className="w-full bg-gray-50 text-black border-2 border-gray-50 rounded-2xl py-4 pl-12 pr-12 text-sm focus:bg-white focus:border-[#12a44d]/20 focus:ring-4 focus:ring-[#12a44d]/5 outline-none transition-all"
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                />
+
+              {/* Submit Button */}
+              <div className="pt-4">
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-[#FCC200] to-[#FDCE33] hover:from-[#FDD85C] hover:to-[#FCC200] disabled:opacity-70 disabled:cursor-not-allowed text-[#233982] font-black py-4 rounded-2xl shadow-lg shadow-[#FCC200]/25 transition-all duration-300 flex items-center justify-center gap-2 group active:scale-[0.98]"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  <AnimatePresence mode="wait">
+                    {isLoading ? (
+                      <motion.div
+                        key="loader"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="w-5 h-5 border-2 border-[#233982]/30 border-t-[#233982] rounded-full animate-spin"
+                      />
+                    ) : (
+                      <motion.div
+                        key="text"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2"
+                      >
+                        MASUK SEKARANG
+                        <ArrowRight
+                          size={18}
+                          className="group-hover:translate-x-1 transition-transform"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </button>
               </div>
+            </form>
+
+            {/* Footer Link */}
+            <div className="mt-10 pt-8 text-center border-t border-[#F8FAF9]">
+              <p className="text-xs text-[#6B7280] font-bold">
+                Belum punya akun?{" "}
+                <a
+                  href="/register"
+                  className="text-[#FCC200] hover:text-[#233982] hover:underline underline-offset-4 transition-colors font-bold"
+                >
+                  Daftar Jurnalis di sini
+                </a>
+              </p>
             </div>
-
-            {/* Remember Me */}
-            <label className="flex items-center gap-3 cursor-pointer group w-fit">
-              <div className="relative flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  className="peer appearance-none w-5 h-5 border-2 border-gray-200 rounded-md checked:bg-[#12a44d] checked:border-[#12a44d] transition-all cursor-pointer"
-                />
-                <ShieldCheck
-                  className="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"
-                  size={12}
-                />
-              </div>
-              <span className="text-xs font-bold text-gray-500 group-hover:text-gray-700 transition-colors">
-                Tetap masuk di perangkat ini
-              </span>
-            </label>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-[#12a44d] text-white font-black py-4 rounded-2xl shadow-lg shadow-green-100 hover:translate-y-[-2px] hover:shadow-green-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 overflow-hidden relative group"
-            >
-              <AnimatePresence mode="wait">
-                {isLoading ? (
-                  <motion.div
-                    key="loader"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"
-                  />
-                ) : (
-                  <motion.div
-                    key="text"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2"
-                  >
-                    MASUK SEKARANG{" "}
-                    <ArrowRight
-                      size={18}
-                      className="group-hover:translate-x-1 transition-transform"
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </button>
-          </form>
-
-          {/* Social / Other Options */}
-          {/* <div className="mt-10">
-            <div className="relative flex items-center justify-center mb-8">
-              <div className="absolute w-full h-[1px] bg-gray-100" />
-              <span className="relative bg-white px-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">
-                Atau masuk dengan
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button className="flex items-center justify-center gap-3 py-3 border-2 border-gray-50 rounded-2xl hover:bg-gray-50 hover:border-gray-100 transition-all font-bold text-xs text-gray-600">
-                <Globe size={16} className="text-[#2b529b]" /> Google
-              </button>
-              <button className="flex items-center justify-center gap-3 py-3 border-2 border-gray-50 rounded-2xl hover:bg-gray-50 hover:border-gray-100 transition-all font-bold text-xs text-gray-600">
-                <Lock size={16} className="text-[#b76979]" /> SSO Sekolah
-              </button>
-            </div>
-          </div> */}
-
-          <div className="mt-auto pt-8 text-center">
-            <p className="text-xs text-gray-400 font-bold">
-              Belum punya akun?{" "}
-              <a href="/register" className="text-[#12a44d] hover:underline">
-                Daftar Jurnalis
-              </a>
-            </p>
-          </div>
+          </motion.div>
         </div>
-      </div>
-
-      {/* Language Switcher Footer */}
-      <div className="absolute bottom-6 flex gap-6 text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">
-        <button className="hover:text-[#12a44d] transition-colors">
-          Indonesia
-        </button>
-        {/* <button className="hover:text-[#12a44d] transition-colors">
-          English
-        </button> */}
-        <span className="text-gray-100">|</span>
-        <span className="cursor-default">
-          © 2024 MedPel Forum OSIS Jawa Barat
-        </span>
       </div>
     </div>
   );

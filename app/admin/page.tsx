@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 // Pastikan path import ini disesuaikan dengan lokasi Anda menyimpan file Sidebar di atas
-import Sidebar from "@/app/components/Sidebar";
+import Sidebar from "@/app/components/admin/Sidebar";
 
 const COLORS = {
   primary: "#FCC200",
@@ -124,12 +124,12 @@ const App = () => {
         {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-[#C4C4C4]/10 sticky top-0 z-40 px-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[#233982]/10 rounded-lg">
+            {/* <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[#233982]/10 rounded-lg">
               <Globe size={14} className="text-[#233982]" />
               <span className="text-[10px] font-bold text-[#233982]">
                 PROD_ENV_MAIN
               </span>
-            </div>
+            </div> */}
             <div className="h-4 w-[1px] bg-[#C4C4C4]/20" />
             <div>
               <h2 className="text-lg font-bold text-[#1B1B1B]">{activeTab}</h2>
