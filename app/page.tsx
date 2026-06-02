@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard,
+  Home,
   Newspaper,
   Users,
   TrendingUp,
@@ -47,16 +47,16 @@ const App = () => {
 
   // Data khusus pengguna/pembaca
   const navItems = [
-    { name: "Beranda", icon: LayoutDashboard },
-    { name: "Nasional", icon: Newspaper },
-    { name: "Pendidikan", icon: Users },
-    { name: "Olahraga", icon: TrendingUp },
+    { name: "Beranda", icon: Home },
+    { name: "Tentang Kami", icon: Newspaper },
+    { name: "Redaksi", icon: Users },
+    { name: "Trend", icon: TrendingUp },
   ];
 
   const articles = [
     {
       id: 1,
-      title: "Inovasi Teknologi Pendidikan di Era Digital 2024",
+      title: "Inovasi Teknologi Pendidikan di Era Digital 2026",
       author: "Budi Santoso",
       category: "Teknologi",
       date: "2 Jam yang lalu",
@@ -69,8 +69,7 @@ const App = () => {
       author: "Siti Aminah",
       category: "Opini",
       date: "5 Jam yang lalu",
-      image:
-        "https://images.unsplash.com/photo-1523240715634-d1c651177e4d?auto=format&fit=crop&q=80&w=800",
+      image: "/kegiatan1.jpeg",
       views: "850",
     },
     {
@@ -79,8 +78,7 @@ const App = () => {
       author: "Rian Ardianto",
       category: "Olahraga",
       date: "1 Hari yang lalu",
-      image:
-        "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&q=80&w=800",
+      image: "/kegiatan1.jpeg",
       views: "2.4k",
     },
   ];
@@ -116,7 +114,7 @@ const App = () => {
         <div className="container mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="/medpel.png"
+              src="/logomedpel.png"
               alt="MedPel Logo"
               className="w-12 h-12 object-contain"
               width={48}
@@ -267,7 +265,7 @@ const App = () => {
                       <span className="flex items-center gap-2">
                         <UserCircle size={16} /> Tim Redaksi
                       </span>
-                      <span>• 12 Okt 2024</span>
+                      <span>• 12 Okt 2026</span>
                       <span className="flex items-center gap-2">
                         <TrendingUp size={16} /> Trending #1
                       </span>
@@ -288,7 +286,7 @@ const App = () => {
                   </div>
                   <div className="space-y-4">
                     {[
-                      { tag: "#Beasiswa2024", count: "1.2k Postingan" },
+                      { tag: "#Beasiswa2026", count: "1.2k Postingan" },
                       { tag: "#LombaKaryaIlmiah", count: "850 Postingan" },
                       { tag: "#KurikulumMerdeka", count: "2.1k Postingan" },
                       { tag: "#MentalHealthPelajar", count: "540 Postingan" },
@@ -438,10 +436,10 @@ const App = () => {
               <h4 className="font-bold text-gray-800 mb-6">Navigasi</h4>
               <ul className="space-y-4 text-sm text-gray-500">
                 {[
+                  "Beranda",
                   "Tentang Kami",
                   "Redaksi",
                   "Kebijakan Privasi",
-                  "Kontak Kami",
                 ].map((item) => (
                   <li
                     key={item}
@@ -453,18 +451,16 @@ const App = () => {
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-gray-800 mb-6">Kategori</h4>
+              <h4 className="font-bold text-gray-800 mb-6">Sosial Media</h4>
               <ul className="space-y-4 text-sm text-gray-500">
-                {["Pendidikan", "Gaya Hidup", "Prestasi", "Teknologi"].map(
-                  (item) => (
-                    <li
-                      key={item}
-                      className="hover:text-[#FCC200] cursor-pointer transition-colors"
-                    >
-                      {item}
-                    </li>
-                  ),
-                )}
+                {["Instagram", "Tiktok", "Youtube", "Whatsapp"].map((item) => (
+                  <li
+                    key={item}
+                    className="hover:text-[#FCC200] cursor-pointer transition-colors"
+                  >
+                    {item}
+                  </li>
+                ))}
               </ul>
             </div>
             <div>
@@ -486,7 +482,7 @@ const App = () => {
           </div>
           <div className="pt-10 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-gray-400 font-medium">
-              © 2024 MedPel Indonesia. All rights reserved.
+              © 2026 MedPel Indonesia. All rights reserved.
             </p>
             <div className="flex gap-6 text-gray-400">
               <Share2

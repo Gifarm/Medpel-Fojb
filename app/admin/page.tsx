@@ -505,11 +505,11 @@ const App = () => {
                 Panel kontrol untuk fungsi ini sedang dioptimalkan dalam
                 environment pengembangan Admin.
               </p>
-              <div className="mt-8 flex gap-3">
+              {/* <div className="mt-8 flex gap-3">
                 <div className="px-4 py-2 bg-[#C4C4C4]/10 rounded-xl text-[10px] font-black text-[#C4C4C4] uppercase tracking-widest">
                   Version 1.0.4-BETA
                 </div>
-              </div>
+              </div> */}
             </motion.div>
           )}
         </div>
