@@ -3,7 +3,7 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard,
+  Home,
   Users,
   Settings,
   CheckSquare,
@@ -41,12 +41,12 @@ export default function Sidebar({
   setIsSidebarOpen,
 }: SidebarProps) {
   const adminItems = [
-    { name: "Dashboard", icon: LayoutDashboard },
+    { name: "Dashboard", icon: Home },
     { name: "Moderasi Konten", icon: CheckSquare },
     { name: "Manajemen User", icon: Users },
     { name: "Analitik Global", icon: Activity },
     { name: "Keamanan Sistem", icon: ShieldAlert },
-    { name: "Database & Log", icon: Database },
+    { name: "Activity Log", icon: Database },
     { name: "Konfigurasi Site", icon: Settings },
   ];
 
@@ -54,7 +54,7 @@ export default function Sidebar({
     <motion.aside
       initial={false}
       animate={{ width: isSidebarOpen ? 280 : 80 }}
-      className="fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#C4C4C4]/10 z-50 flex flex-col transition-all duration-300"
+      className="fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#C4C4C4]/50 z-50 flex flex-col transition-all duration-300"
     >
       {/* Sidebar Logo */}
       <div className="p-6 flex items-center gap-3">
@@ -69,9 +69,9 @@ export default function Sidebar({
               <h1 className="font-bold text-[#233982]">
                 MedPel <span className="text-[#C4C4C4]">Admin</span>
               </h1>
-              <p className="text-[10px] text-[#233982]/60 font-bold uppercase tracking-widest leading-none">
+              {/* <p className="text-[10px] text-[#233982]/60 font-bold uppercase tracking-widest leading-none">
                 Command Center
-              </p>
+              </p> */}
             </motion.div>
           )}
         </AnimatePresence>
@@ -133,9 +133,9 @@ export default function Sidebar({
               <p className="text-xs font-bold text-[#1B1B1B] truncate">
                 Administrator
               </p>
-              <p className="text-[10px] text-[#233982] uppercase font-black flex items-center gap-1">
+              {/* <p className="text-[10px] text-[#233982] uppercase font-black flex items-center gap-1">
                 Online
-              </p>
+              </p> */}
             </div>
           )}
         </div>

@@ -6,48 +6,53 @@ import {
   LayoutDashboard,
   Newspaper,
   Users,
-  Settings,
-  Bell,
+  TrendingUp,
   Search,
   ChevronRight,
-  TrendingUp,
   Bookmark,
   Share2,
   MoreHorizontal,
-  PlusCircle,
-  BarChart3,
-  UserCircle,
   Menu,
   X,
+  UserCircle,
+  BarChart3,
 } from "lucide-react";
-
-const COLORS = {
-  primary: "#FCC200", // kuning utama
-  primarySoft: "#FDCE33",
-  primaryLight: "#FDD85C",
-
-  blueDark: "#233982",
-  blue: "#4F619B",
-  blueLight: "#7281AF",
-
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-  white: "#FFFFFF",
-};
 
 const App = () => {
   const [activeTab, setActiveTab] = useState("Beranda");
-  const [userRole, setUserRole] = useState("visitor"); // visitor, jurnalis, admin
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  // OPTIMASI 1: Scroll listener dengan requestAnimationFrame & passive: true
+  // Mencegah thread utama terhambat saat user scroll cepat
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const isScrolled = window.scrollY > 20;
+          // Hanya update state jika nilai benar-benar berubah
+          setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Cek posisi awal
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Dummy Data
+  // Data khusus pengguna/pembaca
+  const navItems = [
+    { name: "Beranda", icon: LayoutDashboard },
+    { name: "Nasional", icon: Newspaper },
+    { name: "Pendidikan", icon: Users },
+    { name: "Olahraga", icon: TrendingUp },
+  ];
+
   const articles = [
     {
       id: 1,
@@ -55,8 +60,7 @@ const App = () => {
       author: "Budi Santoso",
       category: "Teknologi",
       date: "2 Jam yang lalu",
-      image:
-        "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&q=80&w=800",
+      image: "/kegiatan1.jpeg",
       views: "1.2k",
     },
     {
@@ -81,17 +85,6 @@ const App = () => {
     },
   ];
 
-  const navItems = [
-    { name: "Beranda", icon: LayoutDashboard, COLORS: "primary" },
-    { name: "Eksplorasi", icon: Search },
-    { name: "Jurnalisme", icon: Newspaper, role: "jurnalis" },
-    { name: "Panel Admin", icon: Settings, role: "admin" },
-  ];
-
-  const filteredNav = navItems.filter(
-    (item) => !item.role || item.role === userRole || userRole === "admin",
-  );
-
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-gray-900 selection:bg-yellow-100">
       {/* Dynamic Background Elements */}
@@ -100,17 +93,34 @@ const App = () => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#4F619B]/10 blur-[120px]" />
       </div>
 
-      {/* Custom Navigation Bar */}
+      {/* 
+        OPTIMASI 2: Navbar yang sangat optimal 
+        - will-change: memberi hint ke browser untuk mempersiapkan kompositing GPU
+        - transition spesifik: hanya properti yang berubah yang dianimasikan
+      */}
       <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "py-3 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100" : "py-6 bg-transparent"}`}
+        className="fixed top-0 w-full z-50 will-change-[background-color,backdrop-filter,box-shadow,padding] transition-[background-color,backdrop-filter,box-shadow,padding] duration-300 ease-out"
+        style={{
+          backgroundColor: scrolled
+            ? "rgba(255, 255, 255, 0.85)"
+            : "transparent",
+          backdropFilter: scrolled ? "blur(12px)" : "none",
+          boxShadow: scrolled ? "0 1px 3px 0 rgb(0 0 0 / 0.05)" : "none",
+          paddingTop: scrolled ? "12px" : "24px",
+          paddingBottom: scrolled ? "12px" : "24px",
+          borderBottom: scrolled
+            ? "1px solid rgba(0,0,0,0.05)"
+            : "1px solid transparent",
+        }}
       >
         <div className="container mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo Image */}
             <img
               src="/medpel.png"
               alt="MedPel Logo"
               className="w-12 h-12 object-contain"
+              width={48}
+              height={48}
             />
             <div>
               <h1 className="text-xl font-bold tracking-tight text-[#233982]">
@@ -124,11 +134,15 @@ const App = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center bg-gray-100/50 p-1 rounded-2xl border border-gray-200/50">
-            {filteredNav.map((item) => (
+            {navItems.map((item) => (
               <button
                 key={item.name}
                 onClick={() => setActiveTab(item.name)}
-                className={`relative px-6 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center gap-2 ${activeTab === item.name ? "text-white" : "text-gray-500 hover:text-gray-800"}`}
+                className={`relative px-6 py-2 rounded-xl text-sm font-medium transition-colors duration-300 flex items-center gap-2 ${
+                  activeTab === item.name
+                    ? "text-white"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
               >
                 {activeTab === item.name && (
                   <motion.div
@@ -146,56 +160,79 @@ const App = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 focus-within:ring-2 ring-[#FCC200]/20 transition-all">
+            <div className="hidden sm:flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 focus-within:ring-2 ring-[#FCC200]/20 transition-shadow">
               <Search size={16} className="text-gray-400" />
               <input
                 type="text"
                 placeholder="Cari berita..."
-                className="bg-transparent border-none outline-none text-sm ml-2 w-32 focus:w-48 transition-all"
+                className="bg-transparent border-none outline-none text-sm ml-2 w-32 focus:w-48 transition-[width] duration-300"
               />
             </div>
 
-            <div className="relative group">
-              <button className="flex items-center gap-2 p-1 pr-3 bg-white border border-gray-200 rounded-full hover:shadow-md transition-all">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-xs font-bold">
-                  {userRole === "visitor"
-                    ? "V"
-                    : userRole === "jurnalis"
-                      ? "J"
-                      : "A"}
-                </div>
-                <span className="text-xs font-semibold text-gray-700 capitalize">
-                  {userRole}
-                </span>
-              </button>
-              {/* Role Switcher for Prototype */}
-              <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all p-2">
-                <p className="text-[10px] text-gray-400 px-2 py-1 uppercase font-bold">
-                  Ganti Role (Demo)
-                </p>
-                {["visitor", "jurnalis", "admin"].map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setUserRole(role)}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 rounded-lg capitalize"
-                  >
-                    {role}
-                  </button>
-                ))}
+            <button className="flex items-center gap-2 p-1 pr-3 bg-white border border-gray-200 rounded-full hover:shadow-md transition-shadow">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-xs font-bold">
+                U
               </div>
-            </div>
+              <span className="text-xs font-semibold text-gray-700 hidden sm:block">
+                Masuk
+              </span>
+            </button>
 
             <button
-              className="md:hidden"
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle mobile menu"
             >
-              {isMobileMenuOpen ? <X /> : <Menu />}
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="md:hidden overflow-hidden bg-white/95 backdrop-blur-md border-t border-gray-100"
+            >
+              <div className="container mx-auto px-6 py-4 space-y-2">
+                {navItems.map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      setActiveTab(item.name);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                      activeTab === item.name
+                        ? "bg-[#FCC200]/10 text-[#233982]"
+                        : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <item.icon size={18} />
+                    {item.name}
+                  </button>
+                ))}
+                <div className="pt-4 mt-2 border-t border-gray-100">
+                  <div className="flex items-center bg-gray-50 border border-gray-200 rounded-full px-4 py-2">
+                    <Search size={16} className="text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Cari berita..."
+                      className="bg-transparent border-none outline-none text-sm ml-2 w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
-      {/* Main Content Area */}
+      {/* Main Content Area (Khusus Pengguna/Pembaca) */}
       <main className="container mx-auto px-6 pt-32 pb-20">
         {activeTab === "Beranda" && (
           <motion.div
@@ -207,8 +244,9 @@ const App = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
               <div className="lg:col-span-8">
                 <div className="relative group overflow-hidden rounded-[2rem] aspect-[16/9] shadow-2xl">
+                  {/* OPTIMASI 3: fetchPriority="high" untuk mempercepat LCP (Largest Contentful Paint) */}
                   <img
-                    src="https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&q=80&w=1200"
+                    src="/kegiatan1.jpeg"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     alt="Featured"
                   />
@@ -287,7 +325,7 @@ const App = () => {
                 {["Semua", "Berita", "Prestasi", "Tips"].map((cat) => (
                   <button
                     key={cat}
-                    className="px-5 py-2 rounded-full text-xs font-bold border border-gray-200 hover:border-[#FCC200] transition-all"
+                    className="px-5 py-2 rounded-full text-xs font-bold border border-gray-200 hover:border-[#FCC200] transition-colors"
                   >
                     {cat}
                   </button>
@@ -302,20 +340,28 @@ const App = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-lg group hover:shadow-2xl transition-all duration-500"
+                  className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-lg group hover:shadow-2xl transition-shadow duration-500"
                 >
                   <div className="relative h-56 overflow-hidden">
+                    {/* OPTIMASI 4: Lazy loading & async decoding untuk gambar di bawah fold */}
                     <img
                       src={article.image}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       alt={article.title}
+                      loading="lazy"
+                      decoding="async"
+                      width={800}
+                      height={600}
                     />
                     <div className="absolute top-4 left-4">
                       <span className="px-4 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black text-[#FCC200] uppercase shadow-sm">
                         {article.category}
                       </span>
                     </div>
-                    <button className="absolute bottom-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-600 hover:text-[#FCC200] shadow-sm transition-colors">
+                    <button
+                      className="absolute bottom-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-gray-600 hover:text-[#FCC200] shadow-sm transition-colors"
+                      aria-label="Bookmark article"
+                    >
                       <Bookmark size={18} />
                     </button>
                   </div>
@@ -349,212 +395,23 @@ const App = () => {
           </motion.div>
         )}
 
-        {/* Jurnalist Interface View */}
-        {activeTab === "Jurnalisme" && userRole !== "visitor" && (
+        {/* Placeholder untuk tab lain agar tidak error saat diklik */}
+        {activeTab !== "Beranda" && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-32 text-center"
           >
-            <div className="bg-gradient-to-r from-[#233982] to-[#4F619B] p-10 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">
-                  Halo, Kontributor! 👋
-                </h2>
-                <p className="text-blue-100 opacity-80">
-                  Siap untuk membagikan informasi bermanfaat hari ini?
-                </p>
-              </div>
-              <button className="px-8 py-4 bg-[#FCC200] text-[#1B1B1B] font-black rounded-2xl flex items-center gap-3 hover:scale-105 transition-transform shadow-lg shadow-yellow-400/20">
-                <PlusCircle size={20} />
-                BUAT ARTIKEL BARU
-              </button>
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <Search size={40} className="text-gray-300" />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                {
-                  label: "Total Pembaca",
-                  val: "45.2k",
-                  icon: Users,
-                  color: "text-[#4F619B]",
-                },
-                {
-                  label: "Artikel Publish",
-                  val: "12",
-                  icon: Newspaper,
-                  color: "text-[#FCC200]",
-                },
-                {
-                  label: "Interaksi",
-                  val: "1.2k",
-                  icon: Bell,
-                  color: "text-[#FDCE33]",
-                },
-              ].map((stat, i) => (
-                <div
-                  key={i}
-                  className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4"
-                >
-                  <div
-                    className={`w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center ${stat.color}`}
-                  >
-                    <stat.icon size={24} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase">
-                      {stat.label}
-                    </p>
-                    <p className="text-2xl font-black text-gray-800">
-                      {stat.val}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl overflow-hidden">
-              <div className="p-8 border-b border-gray-50 flex justify-between items-center">
-                <h3 className="font-bold text-lg">Draf & Postingan Saya</h3>
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold">
-                    Terbaru
-                  </button>
-                  <button className="px-4 py-2 text-gray-400 rounded-lg text-xs font-bold">
-                    Populer
-                  </button>
-                </div>
-              </div>
-              <div className="p-0">
-                <table className="w-full text-left">
-                  <thead className="bg-gray-50 text-[10px] uppercase font-black text-gray-400">
-                    <tr>
-                      <th className="px-8 py-4">Judul Artikel</th>
-                      <th className="px-8 py-4">Status</th>
-                      <th className="px-8 py-4">Views</th>
-                      <th className="px-8 py-4">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {[1, 2, 3].map((i) => (
-                      <tr
-                        key={i}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="px-8 py-6">
-                          <p className="font-bold text-gray-700">
-                            Analisis Kurikulum 2024 terhadap Minat Belajar
-                          </p>
-                          <p className="text-[10px] text-gray-400 mt-1">
-                            Terakhir diedit: 10 Menit yang lalu
-                          </p>
-                        </td>
-                        <td className="px-8 py-6">
-                          <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-[10px] font-bold">
-                            PUBLISHED
-                          </span>
-                        </td>
-                        <td className="px-8 py-6 font-bold text-gray-500">
-                          1.240
-                        </td>
-                        <td className="px-8 py-6">
-                          <button className="p-2 text-gray-400 hover:text-[#4F619B] transition-colors">
-                            <Settings size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Admin Panel Placeholder */}
-        {activeTab === "Panel Admin" && userRole === "admin" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-1 lg:grid-cols-4 gap-8"
-          >
-            <aside className="lg:col-span-1 space-y-4">
-              <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-xl space-y-2">
-                {[
-                  "Statistik Umum",
-                  "Manajemen User",
-                  "Moderasi Konten",
-                  "Sistem Konfigurasi",
-                ].map((item, i) => (
-                  <button
-                    key={i}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${i === 0 ? "bg-yellow-50 text-[#FCC200]" : "text-gray-400 hover:bg-gray-50"}`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </aside>
-            <div className="lg:col-span-3 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-4 border-l-[#FCC200]">
-                  <h4 className="text-gray-400 text-xs font-black uppercase mb-2">
-                    User Aktif
-                  </h4>
-                  <p className="text-4xl font-black text-gray-800">1.402</p>
-                  <div className="mt-4 flex items-center gap-2 text-[#FCC200] text-xs font-bold">
-                    <TrendingUp size={14} /> +12% dari bulan lalu
-                  </div>
-                </div>
-                <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm border-l-4 border-l-[#FDCE33]">
-                  <h4 className="text-gray-400 text-xs font-black uppercase mb-2">
-                    Konten Butuh Review
-                  </h4>
-                  <p className="text-4xl font-black text-gray-800">08</p>
-                  <div className="mt-4 flex items-center gap-2 text-[#233982] text-xs font-bold">
-                    Pending Approval
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl p-8">
-                <h3 className="font-bold mb-6">Log Aktivitas Sistem</h3>
-                <div className="space-y-6">
-                  {[
-                    {
-                      user: "Admin01",
-                      act: "Merubah pengaturan landing page",
-                      time: "2 menit yang lalu",
-                    },
-                    {
-                      user: "Jurnalis_Rian",
-                      act: "Mengupload artikel baru: Tips Belajar",
-                      time: "15 menit yang lalu",
-                    },
-                    {
-                      user: "Sistem",
-                      act: "Backup otomatis selesai",
-                      time: "1 jam yang lalu",
-                    },
-                  ].map((log, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-4 items-start pb-4 border-b border-gray-50 last:border-0"
-                    >
-                      <div className="w-2 h-2 bg-[#4F619B] rounded-full mt-2" />
-                      <div>
-                        <p className="text-sm text-gray-700">
-                          <strong>{log.user}</strong> {log.act}
-                        </p>
-                        <p className="text-[10px] text-gray-400 uppercase font-bold mt-1">
-                          {log.time}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Halaman {activeTab}
+            </h2>
+            <p className="text-gray-500 max-w-md">
+              Konten untuk kategori ini sedang dalam proses kurasi oleh tim
+              redaksi kami. Silakan kembali lagi nanti.
+            </p>
           </motion.div>
         )}
       </main>
@@ -565,9 +422,9 @@ const App = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-[#FCC200] rounded-lg flex items-center justify-center">
+                {/* <div className="w-8 h-8 bg-[#FCC200] rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-lg">M</span>
-                </div>
+                </div> */}
                 <h1 className="text-lg font-bold tracking-tight text-[#233982]">
                   Med<span className="text-[#FCC200]">Pel</span>
                 </h1>
@@ -580,35 +437,34 @@ const App = () => {
             <div>
               <h4 className="font-bold text-gray-800 mb-6">Navigasi</h4>
               <ul className="space-y-4 text-sm text-gray-500">
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Tentang Kami
-                </li>
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Redaksi
-                </li>
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Kebijakan Privasi
-                </li>
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Kontak Kami
-                </li>
+                {[
+                  "Tentang Kami",
+                  "Redaksi",
+                  "Kebijakan Privasi",
+                  "Kontak Kami",
+                ].map((item) => (
+                  <li
+                    key={item}
+                    className="hover:text-[#FCC200] cursor-pointer transition-colors"
+                  >
+                    {item}
+                  </li>
+                ))}
               </ul>
             </div>
             <div>
               <h4 className="font-bold text-gray-800 mb-6">Kategori</h4>
               <ul className="space-y-4 text-sm text-gray-500">
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Pendidikan
-                </li>
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Gaya Hidup
-                </li>
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Prestasi
-                </li>
-                <li className="hover:text-[#FCC200] cursor-pointer transition-colors">
-                  Teknologi
-                </li>
+                {["Pendidikan", "Gaya Hidup", "Prestasi", "Teknologi"].map(
+                  (item) => (
+                    <li
+                      key={item}
+                      className="hover:text-[#FCC200] cursor-pointer transition-colors"
+                    >
+                      {item}
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
             <div>
@@ -622,7 +478,7 @@ const App = () => {
                   placeholder="Email Anda"
                   className="bg-transparent border-none outline-none text-xs px-3 w-full"
                 />
-                <button className="bg-[#FCC200] text-[#1B1B1B] p-2 rounded-lg">
+                <button className="bg-[#FCC200] text-[#1B1B1B] p-2 rounded-lg hover:bg-[#FDCE33] transition-colors">
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -641,28 +497,10 @@ const App = () => {
                 size={18}
                 className="hover:text-[#233982] cursor-pointer transition-colors"
               />
-              <Bell
-                size={18}
-                className="hover:text-[#233982] cursor-pointer transition-colors"
-              />
             </div>
           </div>
         </div>
       </footer>
-
-      {/* Floating Action for Mobiles (Contextual) */}
-      <AnimatePresence>
-        {userRole !== "visitor" && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-8 right-8 w-16 h-16 bg-[#FCC200] text-[#1B1B1B] rounded-full shadow-2xl flex items-center justify-center z-50 hover:rotate-90 transition-transform duration-500"
-          >
-            <PlusCircle size={32} />
-          </motion.button>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

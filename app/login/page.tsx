@@ -137,7 +137,7 @@ const App = () => {
               className="space-y-6 mt-12"
             >
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FCC200]/10 rounded-full">
-                <Sparkles size={16} className="text-[#FCC200]" />
+                {/* <Sparkles size={16} className="text-[#FCC200]" /> */}
                 <span className="text-[11px] font-bold text-[#233982] uppercase tracking-wide">
                   Secure Access
                 </span>

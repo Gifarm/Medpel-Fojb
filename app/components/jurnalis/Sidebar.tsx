@@ -50,7 +50,7 @@ export default function SidebarJurnalis({
     <motion.aside
       initial={false}
       animate={{ width: isSidebarOpen ? 280 : 80 }}
-      className="fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#C4C4C4]/10 z-50 flex flex-col transition-all duration-300"
+      className="fixed left-0 top-0 h-full bg-[#ffffff] border-r border-[#C4C4C4]/50 z-50 flex flex-col transition-all duration-300"
     >
       {/* Sidebar Logo */}
       <div className="p-6 flex items-center gap-3">
