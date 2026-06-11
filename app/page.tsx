@@ -1,14 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
-  Newspaper,
-  Users,
-  TrendingUp,
+  LayoutGrid,
+  Hash,
+  Info,
+  Mail,
   Search,
   ChevronRight,
+  ChevronDown,
   Bookmark,
   Share2,
   MoreHorizontal,
@@ -16,22 +19,39 @@ import {
   X,
   UserCircle,
   BarChart3,
+  TrendingUp,
+  Users,
+  GraduationCap,
+  Cpu,
+  Trophy,
+  BookOpen,
+  Dumbbell,
+  Palette,
+  MessageSquare,
+  Award,
+  Medal,
+  Lightbulb,
+  Briefcase,
+  Gamepad2,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 
 const App = () => {
   const [activeTab, setActiveTab] = useState("Beranda");
+  const [activeCategory, setActiveCategory] = useState(null); // State terpisah untuk kategori aktif
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  // OPTIMASI 1: Scroll listener dengan requestAnimationFrame & passive: true
-  // Mencegah thread utama terhambat saat user scroll cepat
+  // OPTIMASI: Scroll listener dengan requestAnimationFrame & passive: true
   useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const isScrolled = window.scrollY > 20;
-          // Hanya update state jika nilai benar-benar berubah
           setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
           ticking = false;
         });
@@ -40,17 +60,76 @@ const App = () => {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Cek posisi awal
+    handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Data khusus pengguna/pembaca
+  // Tutup dropdown kategori ketika klik di luar
+  useEffect(() => {
+    const handleClickOutside = (e: any) => {
+      if (!e.target.closest("[data-category-dropdown]")) {
+        setIsCategoryOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  // Data menu navigasi
   const navItems = [
     { name: "Beranda", icon: Home },
-    { name: "Tentang Kami", icon: Newspaper },
-    { name: "Redaksi", icon: Users },
-    { name: "Trend", icon: TrendingUp },
+    { name: "Kategori", icon: LayoutGrid, hasDropdown: true },
+    { name: "Tag Populer", icon: Hash },
+    { name: "Tentang Kami", icon: Info },
+    { name: "Kontak", icon: Mail },
+  ];
+
+  // DUMMY DATA KATEGORI
+  const popularCategories = [
+    {
+      name: "Pendidikan",
+      icon: GraduationCap,
+      desc: "Kurikulum, sekolah, belajar",
+      color: "from-blue-500 to-blue-600",
+      count: 124,
+    },
+    {
+      name: "Teknologi",
+      icon: Cpu,
+      desc: "Inovasi, gadget, digital",
+      color: "from-purple-500 to-purple-600",
+      count: 89,
+    },
+    {
+      name: "Prestasi",
+      icon: Trophy,
+      desc: "Juara, kompetisi, penghargaan",
+      color: "from-yellow-500 to-orange-500",
+      count: 67,
+    },
+    {
+      name: "Beasiswa",
+      icon: Award,
+      desc: "Info beasiswa dalam & luar negeri",
+      color: "from-emerald-500 to-emerald-600",
+      count: 45,
+    },
+  ];
+
+  const allCategories = [
+    { name: "Pendidikan", icon: GraduationCap, count: 124 },
+    { name: "Teknologi", icon: Cpu, count: 89 },
+    { name: "Kegiatan Sekolah", icon: BookOpen, count: 156 },
+    { name: "Prestasi", icon: Trophy, count: 67 },
+    { name: "Olahraga", icon: Dumbbell, count: 43 },
+    { name: "Seni & Budaya", icon: Palette, count: 38 },
+    { name: "Opini", icon: MessageSquare, count: 92 },
+    { name: "Beasiswa", icon: Award, count: 45 },
+    { name: "Lomba", icon: Medal, count: 71 },
+    { name: "Tips & Tricks", icon: Lightbulb, count: 58 },
+    { name: "Karir & Kuliah", icon: Briefcase, count: 34 },
+    { name: "Hiburan", icon: Gamepad2, count: 29 },
   ];
 
   const articles = [
@@ -83,6 +162,21 @@ const App = () => {
     },
   ];
 
+  // Helper function untuk check apakah menu Kategori aktif
+  const isCategoryActive = activeTab === "Kategori" || activeCategory !== null;
+
+  const handleCategoryClick = (categoryName: any) => {
+    setActiveTab("Kategori"); // Set tab ke Kategori
+    setActiveCategory(categoryName); // Set kategori spesifik
+    setIsCategoryOpen(false);
+  };
+
+  const handleViewAllCategories = () => {
+    setActiveTab("Kategori");
+    setActiveCategory(null); // Null = tampilkan semua kategori
+    setIsCategoryOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-gray-900 selection:bg-yellow-100">
       {/* Dynamic Background Elements */}
@@ -91,11 +185,7 @@ const App = () => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-[#4F619B]/10 blur-[120px]" />
       </div>
 
-      {/* 
-        OPTIMASI 2: Navbar yang sangat optimal 
-        - will-change: memberi hint ke browser untuk mempersiapkan kompositing GPU
-        - transition spesifik: hanya properti yang berubah yang dianimasikan
-      */}
+      {/* Navbar */}
       <nav
         className="fixed top-0 w-full z-50 will-change-[background-color,backdrop-filter,box-shadow,padding] transition-[background-color,backdrop-filter,box-shadow,padding] duration-300 ease-out"
         style={{
@@ -112,6 +202,7 @@ const App = () => {
         }}
       >
         <div className="container mx-auto px-6 flex items-center justify-between">
+          {/* Logo */}
           <div className="flex items-center gap-3">
             <img
               src="/logomedpel.png"
@@ -132,31 +223,191 @@ const App = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center bg-gray-100/50 p-1 rounded-2xl border border-gray-200/50">
-            {navItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => setActiveTab(item.name)}
-                className={`relative px-6 py-2 rounded-xl text-sm font-medium transition-colors duration-300 flex items-center gap-2 ${
-                  activeTab === item.name
-                    ? "text-white"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                {activeTab === item.name && (
-                  <motion.div
-                    layoutId="nav-active"
-                    className="absolute inset-0 bg-gradient-to-r from-[#233982] to-[#4F619B] rounded-xl shadow-md"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-                <span className="relative z-10 flex items-center gap-2">
-                  <item.icon size={16} />
-                  {item.name}
-                </span>
-              </button>
-            ))}
+            {navItems.map((item) => {
+              // Check apakah menu ini aktif
+              const isActive = item.hasDropdown
+                ? isCategoryActive
+                : activeTab === item.name;
+
+              return (
+                <div
+                  key={item.name}
+                  className="relative"
+                  data-category-dropdown
+                  onMouseEnter={() =>
+                    item.hasDropdown && setIsCategoryOpen(true)
+                  }
+                  onMouseLeave={() =>
+                    item.hasDropdown && setIsCategoryOpen(false)
+                  }
+                >
+                  <button
+                    onClick={() => {
+                      if (!item.hasDropdown) {
+                        setActiveTab(item.name);
+                        setActiveCategory(null);
+                      } else {
+                        setIsCategoryOpen(!isCategoryOpen);
+                      }
+                    }}
+                    className={`relative px-6 py-2 rounded-xl text-sm font-medium transition-colors duration-300 flex items-center gap-2 ${
+                      isActive
+                        ? "text-white"
+                        : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="nav-active"
+                        className="absolute inset-0 bg-gradient-to-r from-[#233982] to-[#4F619B] rounded-xl shadow-md"
+                        transition={{
+                          type: "spring",
+                          bounce: 0.2,
+                          duration: 0.6,
+                        }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <item.icon size={16} />
+                      {item.name}
+                      {item.hasDropdown && (
+                        <motion.div
+                          animate={{ rotate: isCategoryOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown size={14} />
+                        </motion.div>
+                      )}
+                    </span>
+                  </button>
+
+                  {/* MEGA MENU DROPDOWN KATEGORI */}
+                  <AnimatePresence>
+                    {item.hasDropdown && isCategoryOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[680px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+                        data-category-dropdown
+                      >
+                        {/* Header Dropdown */}
+                        <div className="px-6 py-4 bg-gradient-to-r from-[#233982]/5 to-[#FCC200]/5 border-b border-gray-100">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-sm text-[#233982]">
+                              Jelajahi Topik Favorit Pelajar
+                            </h3>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Temukan berita sesuai minat kamu
+                          </p>
+                        </div>
+
+                        {/* Kategori Populer (Card Grid) */}
+                        <div className="px-6 py-5 border-b border-gray-100">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                            Kategori Populer
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            {popularCategories.map((cat) => (
+                              <button
+                                key={cat.name}
+                                onClick={() => handleCategoryClick(cat.name)}
+                                className={`group flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all text-left border ${
+                                  activeCategory === cat.name
+                                    ? "border-[#FCC200] bg-[#FCC200]/5"
+                                    : "border-transparent hover:border-gray-100"
+                                }`}
+                              >
+                                <div
+                                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}
+                                >
+                                  <cat.icon size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className={`font-bold text-sm transition-colors truncate ${
+                                      activeCategory === cat.name
+                                        ? "text-[#233982]"
+                                        : "text-gray-800 group-hover:text-[#233982]"
+                                    }`}
+                                  >
+                                    {cat.name}
+                                  </p>
+                                  <p className="text-[11px] text-gray-500 truncate">
+                                    {cat.desc}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                  {cat.count}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Semua Kategori (List Grid) */}
+                        <div className="px-6 py-5">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                            Semua Kategori
+                          </p>
+                          <div className="grid grid-cols-3 gap-1">
+                            {allCategories.map((cat) => (
+                              <button
+                                key={cat.name}
+                                onClick={() => handleCategoryClick(cat.name)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left group ${
+                                  activeCategory === cat.name
+                                    ? "bg-[#FCC200]/10 text-[#233982]"
+                                    : "text-gray-600 hover:bg-[#FCC200]/10 hover:text-[#233982]"
+                                }`}
+                              >
+                                <cat.icon
+                                  size={14}
+                                  className={
+                                    activeCategory === cat.name
+                                      ? "text-[#FCC200]"
+                                      : "text-gray-400 group-hover:text-[#FCC200]"
+                                  }
+                                />
+                                <span className="font-medium truncate flex-1">
+                                  {cat.name}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Footer Dropdown */}
+                        <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                          <p className="text-xs text-gray-500">
+                            Total{" "}
+                            <span className="font-bold text-[#233982]">
+                              {allCategories.length}
+                            </span>{" "}
+                            kategori tersedia
+                          </p>
+                          <button
+                            onClick={handleViewAllCategories}
+                            className="flex items-center gap-1 text-xs font-bold text-[#233982] hover:text-[#FCC200] transition-colors group"
+                          >
+                            Lihat Semua
+                            <ArrowRight
+                              size={12}
+                              className="group-hover:translate-x-1 transition-transform"
+                            />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
 
+          {/* Right Side: Search & Auth Buttons */}
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center bg-white border border-gray-200 rounded-full px-4 py-1.5 focus-within:ring-2 ring-[#FCC200]/20 transition-shadow">
               <Search size={16} className="text-gray-400" />
@@ -167,15 +418,60 @@ const App = () => {
               />
             </div>
 
-            <button className="flex items-center gap-2 p-1 pr-3 bg-white border border-gray-200 rounded-full hover:shadow-md transition-shadow">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-xs font-bold">
-                U
-              </div>
-              <span className="text-xs font-semibold text-gray-700 hidden sm:block">
-                Masuk
-              </span>
-            </button>
+            {/* Desktop Auth Buttons */}
+            <div className="hidden sm:flex items-center gap-3">
+              {isLoggedIn ? (
+                <div className="relative group">
+                  <button className="flex items-center gap-2 p-1 pr-3 bg-white border border-gray-200 rounded-full hover:shadow-md transition-shadow">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-xs font-bold">
+                      U
+                    </div>
+                    <span className="text-xs font-semibold text-gray-700">
+                      Profil
+                    </span>
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="p-4 border-b border-gray-100">
+                      <p className="text-sm font-bold text-gray-800">
+                        User Pelajar
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        user@mediapelajar.id
+                      </p>
+                    </div>
+                    <div className="p-2">
+                      <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                        <UserCircle size={16} /> Edit Profil
+                      </button>
+                      <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                        <BarChart3 size={16} /> Riwayat Komentar
+                      </button>
+                      <button
+                        onClick={() => setIsLoggedIn(false)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <X size={16} /> Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsLoggedIn(true)}
+                    className="px-5 py-2 text-xs font-semibold text-[#233982] border border-[#233982]/20 rounded-full hover:bg-[#233982]/5 transition-colors"
+                  >
+                    Masuk
+                  </button>
+                  <button className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#233982] to-[#4F619B] rounded-full hover:shadow-md transition-shadow">
+                    Daftar
+                  </button>
+                </>
+              )}
+            </div>
 
+            {/* Mobile Menu Toggle */}
             <button
               className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -197,24 +493,105 @@ const App = () => {
               className="md:hidden overflow-hidden bg-white/95 backdrop-blur-md border-t border-gray-100"
             >
               <div className="container mx-auto px-6 py-4 space-y-2">
-                {navItems.map((item) => (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      setActiveTab(item.name);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      activeTab === item.name
-                        ? "bg-[#FCC200]/10 text-[#233982]"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    <item.icon size={18} />
-                    {item.name}
-                  </button>
-                ))}
-                <div className="pt-4 mt-2 border-t border-gray-100">
+                {navItems.map((item) => {
+                  const isActive = item.hasDropdown
+                    ? isCategoryActive
+                    : activeTab === item.name;
+
+                  return (
+                    <div key={item.name}>
+                      <button
+                        onClick={() => {
+                          if (item.hasDropdown) {
+                            setIsCategoryOpen(!isCategoryOpen);
+                          } else {
+                            setActiveTab(item.name);
+                            setActiveCategory(null);
+                            setIsMobileMenuOpen(false);
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                          isActive
+                            ? "bg-[#FCC200]/10 text-[#233982]"
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <item.icon size={18} />
+                          {item.name}
+                        </span>
+                        {item.hasDropdown && (
+                          <motion.div
+                            animate={{ rotate: isCategoryOpen ? 180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <ChevronDown size={16} />
+                          </motion.div>
+                        )}
+                      </button>
+
+                      {/* Mobile Category List (Accordion) */}
+                      <AnimatePresence>
+                        {item.hasDropdown && isCategoryOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-12 pr-4 py-2 space-y-1">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest py-2">
+                                Kategori Populer
+                              </p>
+                              {popularCategories.map((cat) => (
+                                <button
+                                  key={cat.name}
+                                  onClick={() => {
+                                    handleCategoryClick(cat.name);
+                                    setIsMobileMenuOpen(false);
+                                  }}
+                                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                                    activeCategory === cat.name
+                                      ? "bg-[#FCC200]/10 text-[#233982]"
+                                      : "text-gray-600 hover:bg-[#FCC200]/10 hover:text-[#233982]"
+                                  }`}
+                                >
+                                  <cat.icon
+                                    size={14}
+                                    className={
+                                      activeCategory === cat.name
+                                        ? "text-[#FCC200]"
+                                        : "text-[#FCC200]"
+                                    }
+                                  />
+                                  <span className="font-medium flex-1 text-left">
+                                    {cat.name}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {cat.count}
+                                  </span>
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => {
+                                  handleViewAllCategories();
+                                  setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 mt-2 text-xs font-bold text-[#233982] hover:text-[#FCC200] transition-colors"
+                              >
+                                Lihat Semua Kategori <ArrowRight size={12} />
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
+
+                {/* Mobile Search & Auth */}
+                <div className="pt-4 mt-2 border-t border-gray-100 space-y-3">
                   <div className="flex items-center bg-gray-50 border border-gray-200 rounded-full px-4 py-2">
                     <Search size={16} className="text-gray-400" />
                     <input
@@ -223,6 +600,48 @@ const App = () => {
                       className="bg-transparent border-none outline-none text-sm ml-2 w-full"
                     />
                   </div>
+
+                  {isLoggedIn ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-sm font-bold">
+                          U
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">
+                            User Pelajar
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            user@mediapelajar.id
+                          </p>
+                        </div>
+                      </div>
+                      <button className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
+                        <UserCircle size={16} /> Edit Profil
+                      </button>
+                      <button className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
+                        <BarChart3 size={16} /> Riwayat Komentar
+                      </button>
+                      <button
+                        onClick={() => setIsLoggedIn(false)}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                      >
+                        <X size={16} /> Logout
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setIsLoggedIn(true)}
+                        className="flex-1 py-3 text-sm font-semibold text-[#233982] border border-[#233982]/20 rounded-xl hover:bg-[#233982]/5 transition-colors"
+                      >
+                        Masuk
+                      </button>
+                      <button className="flex-1 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#233982] to-[#4F619B] rounded-xl hover:shadow-md transition-shadow">
+                        Daftar
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -230,9 +649,9 @@ const App = () => {
         </AnimatePresence>
       </nav>
 
-      {/* Main Content Area (Khusus Pengguna/Pembaca) */}
+      {/* Main Content Area */}
       <main className="container mx-auto px-6 pt-32 pb-20">
-        {activeTab === "Beranda" && (
+        {activeTab === "Beranda" && !activeCategory && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -242,7 +661,6 @@ const App = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16">
               <div className="lg:col-span-8">
                 <div className="relative group overflow-hidden rounded-[2rem] aspect-[16/9] shadow-2xl">
-                  {/* OPTIMASI 3: fetchPriority="high" untuk mempercepat LCP (Largest Contentful Paint) */}
                   <img
                     src="/kegiatan1.jpeg"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -341,7 +759,6 @@ const App = () => {
                   className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-lg group hover:shadow-2xl transition-shadow duration-500"
                 >
                   <div className="relative h-56 overflow-hidden">
-                    {/* OPTIMASI 4: Lazy loading & async decoding untuk gambar di bawah fold */}
                     <img
                       src={article.image}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
@@ -393,8 +810,91 @@ const App = () => {
           </motion.div>
         )}
 
-        {/* Placeholder untuk tab lain agar tidak error saat diklik */}
-        {activeTab !== "Beranda" && (
+        {/* Halaman Kategori */}
+        {activeTab === "Kategori" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                {activeCategory
+                  ? `Kategori: ${activeCategory}`
+                  : "Semua Kategori"}
+              </h2>
+              <div className="h-1.5 w-12 bg-gradient-to-r from-[#FCC200] to-[#FDCE33] rounded-full" />
+            </div>
+
+            {activeCategory ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {articles
+                  .filter((a) => a.category === activeCategory)
+                  .map((article, index) => (
+                    <motion.div
+                      key={article.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-lg group hover:shadow-2xl transition-shadow duration-500"
+                    >
+                      <div className="relative h-56 overflow-hidden">
+                        <img
+                          src={article.image}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          alt={article.title}
+                          loading="lazy"
+                          decoding="async"
+                          width={800}
+                          height={600}
+                        />
+                        <div className="absolute top-4 left-4">
+                          <span className="px-4 py-1.5 bg-white/90 backdrop-blur-md rounded-full text-[10px] font-black text-[#FCC200] uppercase shadow-sm">
+                            {article.category}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-8">
+                        <h4 className="text-xl font-bold text-gray-800 mb-4 group-hover:text-[#233982] transition-colors leading-tight">
+                          {article.title}
+                        </h4>
+                        <button className="flex items-center gap-2 text-sm font-bold text-[#FCC200] group/btn">
+                          Baca Selengkapnya
+                          <ChevronRight
+                            size={16}
+                            className="group-hover/btn:translate-x-1 transition-transform"
+                          />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {allCategories.map((cat, index) => (
+                  <motion.button
+                    key={cat.name}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => handleCategoryClick(cat.name)}
+                    className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg hover:shadow-xl transition-all group text-left"
+                  >
+                    <cat.icon
+                      size={32}
+                      className="text-[#FCC200] mb-3 group-hover:scale-110 transition-transform"
+                    />
+                    <h3 className="font-bold text-gray-800 mb-1">{cat.name}</h3>
+                    <p className="text-xs text-gray-500">{cat.count} artikel</p>
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Placeholder untuk tab lain */}
+        {activeTab !== "Beranda" && activeTab !== "Kategori" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -420,9 +920,6 @@ const App = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
-                {/* <div className="w-8 h-8 bg-[#FCC200] rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">M</span>
-                </div> */}
                 <h1 className="text-lg font-bold tracking-tight text-[#233982]">
                   Med<span className="text-[#FCC200]">Pel</span>
                 </h1>
@@ -437,9 +934,10 @@ const App = () => {
               <ul className="space-y-4 text-sm text-gray-500">
                 {[
                   "Beranda",
+                  "Kategori",
+                  "Tag Populer",
                   "Tentang Kami",
-                  "Redaksi",
-                  "Kebijakan Privasi",
+                  "Kontak",
                 ].map((item) => (
                   <li
                     key={item}
