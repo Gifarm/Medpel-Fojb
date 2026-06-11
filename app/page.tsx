@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -39,13 +40,14 @@ import {
 
 const App = () => {
   const [activeTab, setActiveTab] = useState("Beranda");
-  const [activeCategory, setActiveCategory] = useState(null); // State terpisah untuk kategori aktif
+  const [activeCategory, setActiveCategory] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false); // State terpisah untuk mobile
 
-  // OPTIMASI: Scroll listener dengan requestAnimationFrame & passive: true
+  // OPTIMASI: Scroll listener
   useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
@@ -65,7 +67,7 @@ const App = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Tutup dropdown kategori ketika klik di luar
+  // Tutup dropdown ketika klik di luar
   useEffect(() => {
     const handleClickOutside = (e: any) => {
       if (!e.target.closest("[data-category-dropdown]")) {
@@ -76,7 +78,13 @@ const App = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // Data menu navigasi
+  // Reset mobile category saat mobile menu ditutup
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      setMobileCategoryOpen(false);
+    }
+  }, [isMobileMenuOpen]);
+
   const navItems = [
     { name: "Beranda", icon: Home },
     { name: "Kategori", icon: LayoutGrid, hasDropdown: true },
@@ -85,7 +93,6 @@ const App = () => {
     { name: "Kontak", icon: Mail },
   ];
 
-  // DUMMY DATA KATEGORI
   const popularCategories = [
     {
       name: "Pendidikan",
@@ -162,19 +169,26 @@ const App = () => {
     },
   ];
 
-  // Helper function untuk check apakah menu Kategori aktif
   const isCategoryActive = activeTab === "Kategori" || activeCategory !== null;
 
   const handleCategoryClick = (categoryName: any) => {
-    setActiveTab("Kategori"); // Set tab ke Kategori
-    setActiveCategory(categoryName); // Set kategori spesifik
+    setActiveTab("Kategori");
+    setActiveCategory(categoryName);
     setIsCategoryOpen(false);
+    setMobileCategoryOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   const handleViewAllCategories = () => {
     setActiveTab("Kategori");
-    setActiveCategory(null); // Null = tampilkan semua kategori
+    setActiveCategory(null);
     setIsCategoryOpen(false);
+    setMobileCategoryOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleMobileCategoryToggle = () => {
+    setMobileCategoryOpen(!mobileCategoryOpen);
   };
 
   return (
@@ -224,7 +238,6 @@ const App = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center bg-gray-100/50 p-1 rounded-2xl border border-gray-200/50">
             {navItems.map((item) => {
-              // Check apakah menu ini aktif
               const isActive = item.hasDropdown
                 ? isCategoryActive
                 : activeTab === item.name;
@@ -281,7 +294,7 @@ const App = () => {
                     </span>
                   </button>
 
-                  {/* MEGA MENU DROPDOWN KATEGORI */}
+                  {/* MEGA MENU DROPDOWN KATEGORI - Desktop */}
                   <AnimatePresence>
                     {item.hasDropdown && isCategoryOpen && (
                       <motion.div
@@ -289,7 +302,7 @@ const App = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.98 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[680px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+                        className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[680px] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50"
                         data-category-dropdown
                       >
                         {/* Header Dropdown */}
@@ -304,7 +317,7 @@ const App = () => {
                           </p>
                         </div>
 
-                        {/* Kategori Populer (Card Grid) */}
+                        {/* Kategori Populer */}
                         <div className="px-6 py-5 border-b border-gray-100">
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             Kategori Populer
@@ -347,7 +360,7 @@ const App = () => {
                           </div>
                         </div>
 
-                        {/* Semua Kategori (List Grid) */}
+                        {/* Semua Kategori */}
                         <div className="px-6 py-5">
                           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             Semua Kategori
@@ -473,7 +486,7 @@ const App = () => {
 
             {/* Mobile Menu Toggle */}
             <button
-              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-50"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle mobile menu"
             >
@@ -482,7 +495,7 @@ const App = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Improved */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
@@ -503,16 +516,18 @@ const App = () => {
                       <button
                         onClick={() => {
                           if (item.hasDropdown) {
-                            setIsCategoryOpen(!isCategoryOpen);
+                            // Untuk kategori, toggle accordion
+                            handleMobileCategoryToggle();
                           } else {
+                            // Untuk menu lain, langsung navigate
                             setActiveTab(item.name);
                             setActiveCategory(null);
                             setIsMobileMenuOpen(false);
                           }
                         }}
-                        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                           isActive
-                            ? "bg-[#FCC200]/10 text-[#233982]"
+                            ? "bg-[#233982] text-white shadow-md"
                             : "text-gray-600 hover:bg-gray-50"
                         }`}
                       >
@@ -522,65 +537,111 @@ const App = () => {
                         </span>
                         {item.hasDropdown && (
                           <motion.div
-                            animate={{ rotate: isCategoryOpen ? 180 : 0 }}
+                            animate={{ rotate: mobileCategoryOpen ? 180 : 0 }}
                             transition={{ duration: 0.2 }}
+                            className="p-1"
                           >
-                            <ChevronDown size={16} />
+                            <ChevronDown
+                              size={18}
+                              className={
+                                mobileCategoryOpen ? "text-[#FCC200]" : ""
+                              }
+                            />
                           </motion.div>
                         )}
                       </button>
 
-                      {/* Mobile Category List (Accordion) */}
+                      {/* Mobile Category Accordion - IMPROVED */}
                       <AnimatePresence>
-                        {item.hasDropdown && isCategoryOpen && (
+                        {item.hasDropdown && mobileCategoryOpen && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
+                            transition={{ duration: 0.25, ease: "easeInOut" }}
                             className="overflow-hidden"
                           >
-                            <div className="pl-12 pr-4 py-2 space-y-1">
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest py-2">
-                                Kategori Populer
-                              </p>
-                              {popularCategories.map((cat) => (
-                                <button
-                                  key={cat.name}
-                                  onClick={() => {
-                                    handleCategoryClick(cat.name);
-                                    setIsMobileMenuOpen(false);
-                                  }}
-                                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                                    activeCategory === cat.name
-                                      ? "bg-[#FCC200]/10 text-[#233982]"
-                                      : "text-gray-600 hover:bg-[#FCC200]/10 hover:text-[#233982]"
-                                  }`}
-                                >
-                                  <cat.icon
-                                    size={14}
-                                    className={
-                                      activeCategory === cat.name
-                                        ? "text-[#FCC200]"
-                                        : "text-[#FCC200]"
-                                    }
-                                  />
-                                  <span className="font-medium flex-1 text-left">
-                                    {cat.name}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400">
-                                    {cat.count}
-                                  </span>
-                                </button>
-                              ))}
+                            <div className="pl-4 pr-2 py-3 space-y-2">
+                              {/* Kategori Populer Section */}
+                              <div className="mb-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 py-2">
+                                  Kategori Populer
+                                </p>
+                                <div className="space-y-1">
+                                  {popularCategories.map((cat) => (
+                                    <button
+                                      key={cat.name}
+                                      onClick={() =>
+                                        handleCategoryClick(cat.name)
+                                      }
+                                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all duration-200 ${
+                                        activeCategory === cat.name
+                                          ? "bg-[#FCC200]/20 text-[#233982] shadow-sm"
+                                          : "text-gray-600 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <div
+                                        className={`w-9 h-9 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-white flex-shrink-0`}
+                                      >
+                                        <cat.icon size={16} />
+                                      </div>
+                                      <div className="flex-1 text-left min-w-0">
+                                        <p className="font-semibold text-sm truncate">
+                                          {cat.name}
+                                        </p>
+                                        <p className="text-[11px] text-gray-500 truncate">
+                                          {cat.desc}
+                                        </p>
+                                      </div>
+                                      <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full flex-shrink-0">
+                                        {cat.count}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Semua Kategori Section */}
+                              <div className="border-t border-gray-100 pt-3">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 py-2">
+                                  Semua Kategori
+                                </p>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {allCategories.map((cat) => (
+                                    <button
+                                      key={cat.name}
+                                      onClick={() =>
+                                        handleCategoryClick(cat.name)
+                                      }
+                                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+                                        activeCategory === cat.name
+                                          ? "bg-[#FCC200]/20 text-[#233982]"
+                                          : "text-gray-600 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <cat.icon
+                                        size={14}
+                                        className={
+                                          activeCategory === cat.name
+                                            ? "text-[#FCC200]"
+                                            : "text-gray-400"
+                                        }
+                                      />
+                                      <span className="font-medium truncate">
+                                        {cat.name}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Lihat Semua Button */}
                               <button
-                                onClick={() => {
-                                  handleViewAllCategories();
-                                  setIsMobileMenuOpen(false);
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 mt-2 text-xs font-bold text-[#233982] hover:text-[#FCC200] transition-colors"
+                                onClick={handleViewAllCategories}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-3 mt-3 text-xs font-bold text-[#233982] bg-[#233982]/5 hover:bg-[#233982]/10 rounded-xl transition-colors"
                               >
-                                Lihat Semua Kategori <ArrowRight size={12} />
+                                Lihat Semua Kategori
+                                <ArrowRight size={14} />
                               </button>
                             </div>
                           </motion.div>
@@ -592,19 +653,19 @@ const App = () => {
 
                 {/* Mobile Search & Auth */}
                 <div className="pt-4 mt-2 border-t border-gray-100 space-y-3">
-                  <div className="flex items-center bg-gray-50 border border-gray-200 rounded-full px-4 py-2">
-                    <Search size={16} className="text-gray-400" />
+                  <div className="flex items-center bg-gray-50 border border-gray-200 rounded-full px-4 py-3">
+                    <Search size={18} className="text-gray-400" />
                     <input
                       type="text"
                       placeholder="Cari berita..."
-                      className="bg-transparent border-none outline-none text-sm ml-2 w-full"
+                      className="bg-transparent border-none outline-none text-sm ml-3 w-full"
                     />
                   </div>
 
                   {isLoggedIn ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-sm font-bold">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#233982] to-[#4F619B] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                           U
                         </div>
                         <div>
