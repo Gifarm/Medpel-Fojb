@@ -6,7 +6,7 @@ import {
   Home,
   FilePlus,
   FileText,
-  BarChart3,
+  Bell,
   Settings,
   LogOut,
   ChevronRight,
@@ -38,19 +38,20 @@ export default function SidebarJurnalis({
   isSidebarOpen,
   setIsSidebarOpen,
 }: SidebarJurnalisProps) {
+  // Menu disesuaikan persis dengan spesifikasi PRD Dashboard Jurnalis
   const jurnalisItems = [
-    { name: "Dashboard", icon: Home },
+    { name: "Dashboard", icon: Home }, // Opsional: Sebagai halaman overview ringkas
     { name: "Tulis Artikel", icon: FilePlus },
     { name: "Artikel Saya", icon: FileText },
-    { name: "Statistik", icon: BarChart3 },
-    { name: "Pengaturan", icon: Settings },
+    { name: "Notifikasi", icon: Bell }, // Ditambahkan sesuai PRD (Revisi/Feedback Admin)
+    { name: "Pengaturan Akun", icon: Settings }, // Disesuaikan namanya dengan PRD
   ];
 
   return (
     <motion.aside
       initial={false}
       animate={{ width: isSidebarOpen ? 280 : 80 }}
-      className="fixed left-0 top-0 h-full bg-[#ffffff] border-r border-[#C4C4C4]/50 z-50 flex flex-col transition-all duration-300"
+      className="fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#C4C4C4]/50 z-50 flex flex-col transition-all duration-300"
     >
       {/* Sidebar Logo */}
       <div className="p-6 flex items-center gap-3">
@@ -74,11 +75,13 @@ export default function SidebarJurnalis({
       </div>
 
       {/* Sidebar Nav */}
-      <div className="flex-1 px-4 py-6 space-y-2 no-scrollbar">
+      <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
         <p
-          className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ml-4 text-[#C4C4C4] ${isSidebarOpen ? "opacity-100" : "opacity-0"}`}
+          className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ml-4 text-[#C4C4C4] ${
+            isSidebarOpen ? "opacity-100" : "opacity-0"
+          }`}
         >
-          Master Data
+          Menu Utama
         </p>
         {jurnalisItems.map((item) => (
           <button
@@ -87,7 +90,7 @@ export default function SidebarJurnalis({
             className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${
               activeTab === item.name
                 ? "bg-[#FCC200]/10 text-[#233982]"
-                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10"
+                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]/70"
             }`}
           >
             <item.icon
@@ -103,7 +106,8 @@ export default function SidebarJurnalis({
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-sm font-bold"
+                  exit={{ opacity: 0 }}
+                  className="text-sm font-bold whitespace-nowrap"
                 >
                   {item.name}
                 </motion.span>
@@ -122,7 +126,9 @@ export default function SidebarJurnalis({
       {/* Sidebar Footer */}
       <div className="p-4 mt-auto space-y-2">
         <div
-          className={`flex items-center gap-3 p-3 bg-[#C4C4C4]/10 rounded-2xl transition-all ${!isSidebarOpen ? "justify-center" : ""}`}
+          className={`flex items-center gap-3 p-3 bg-[#C4C4C4]/10 rounded-2xl transition-all ${
+            !isSidebarOpen ? "justify-center" : ""
+          }`}
         >
           {isSidebarOpen && (
             <div className="overflow-hidden">
@@ -136,15 +142,20 @@ export default function SidebarJurnalis({
           )}
         </div>
         <button
-          className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-50 transition-all ${!isSidebarOpen ? "justify-center" : ""}`}
+          className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-50 transition-all ${
+            !isSidebarOpen ? "justify-center" : ""
+          }`}
         >
           <LogOut size={18} />
           {isSidebarOpen && (
-            <span className="text-xs font-bold uppercase">Keluar</span>
+            <span className="text-xs font-bold uppercase whitespace-nowrap">
+              Keluar
+            </span>
           )}
         </button>
       </div>
 
+      {/* Toggle Sidebar Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className="absolute -right-3 top-12 w-6 h-6 bg-[#FFFFFF] border border-[#C4C4C4]/20 shadow-md rounded-full flex items-center justify-center text-[#C4C4C4] hover:text-[#233982] transition-colors"

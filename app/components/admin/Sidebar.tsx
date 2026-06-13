@@ -8,8 +8,8 @@ import {
   Settings,
   CheckSquare,
   Activity,
-  ShieldAlert,
-  Database,
+  Tags,
+  MessageSquare,
   LogOut,
   ChevronRight,
 } from "lucide-react";
@@ -40,14 +40,15 @@ export default function Sidebar({
   isSidebarOpen,
   setIsSidebarOpen,
 }: SidebarProps) {
+  // Menu disesuaikan persis dengan spesifikasi PRD Dashboard Admin
   const adminItems = [
-    { name: "Dashboard", icon: Home },
-    { name: "Moderasi Konten", icon: CheckSquare },
+    { name: "Dashboard", icon: Home }, // Landing page default
+    { name: "Moderasi Artikel", icon: CheckSquare },
     { name: "Manajemen User", icon: Users },
-    { name: "Analitik Global", icon: Activity },
-    { name: "Keamanan Sistem", icon: ShieldAlert },
-    { name: "Activity Log", icon: Database },
-    { name: "Konfigurasi Site", icon: Settings },
+    { name: "Kategori & Tag", icon: Tags },
+    { name: "Moderasi Komentar", icon: MessageSquare },
+    { name: "Statistik Ringkas", icon: Activity },
+    { name: "Pengaturan Platform", icon: Settings },
   ];
 
   return (
@@ -69,9 +70,6 @@ export default function Sidebar({
               <h1 className="font-bold text-[#233982]">
                 MedPel <span className="text-[#C4C4C4]">Admin</span>
               </h1>
-              {/* <p className="text-[10px] text-[#233982]/60 font-bold uppercase tracking-widest leading-none">
-                Command Center
-              </p> */}
             </motion.div>
           )}
         </AnimatePresence>
@@ -80,7 +78,9 @@ export default function Sidebar({
       {/* Sidebar Nav */}
       <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
         <p
-          className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ml-4 text-[#C4C4C4] ${isSidebarOpen ? "opacity-100" : "opacity-0"}`}
+          className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ml-4 text-[#C4C4C4] ${
+            isSidebarOpen ? "opacity-100" : "opacity-0"
+          }`}
         >
           Sistem Utama
         </p>
@@ -91,7 +91,7 @@ export default function Sidebar({
             className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${
               activeTab === item.name
                 ? "bg-[#233982]/10 text-[#233982]"
-                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10"
+                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]/70"
             }`}
           >
             <item.icon
@@ -107,7 +107,8 @@ export default function Sidebar({
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-sm font-bold"
+                  exit={{ opacity: 0 }}
+                  className="text-sm font-bold whitespace-nowrap"
                 >
                   {item.name}
                 </motion.span>
@@ -126,29 +127,33 @@ export default function Sidebar({
       {/* Sidebar Footer */}
       <div className="p-4 mt-auto space-y-2">
         <div
-          className={`flex items-center gap-3 p-3 bg-[#C4C4C4]/10 rounded-2xl transition-all ${!isSidebarOpen ? "justify-center" : ""}`}
+          className={`flex items-center gap-3 p-3 bg-[#C4C4C4]/10 rounded-2xl transition-all ${
+            !isSidebarOpen ? "justify-center" : ""
+          }`}
         >
           {isSidebarOpen && (
             <div className="overflow-hidden">
               <p className="text-xs font-bold text-[#1B1B1B] truncate">
                 Administrator
               </p>
-              {/* <p className="text-[10px] text-[#233982] uppercase font-black flex items-center gap-1">
-                Online
-              </p> */}
             </div>
           )}
         </div>
         <button
-          className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-50 transition-all ${!isSidebarOpen ? "justify-center" : ""}`}
+          className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-50 transition-all ${
+            !isSidebarOpen ? "justify-center" : ""
+          }`}
         >
           <LogOut size={18} />
           {isSidebarOpen && (
-            <span className="text-xs font-bold uppercase">Logout Sistem</span>
+            <span className="text-xs font-bold uppercase whitespace-nowrap">
+              Logout Sistem
+            </span>
           )}
         </button>
       </div>
 
+      {/* Toggle Sidebar Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className="absolute -right-3 top-12 w-6 h-6 bg-[#FFFFFF] border border-[#C4C4C4]/20 shadow-md rounded-full flex items-center justify-center text-[#C4C4C4] hover:text-[#233982] transition-colors"
