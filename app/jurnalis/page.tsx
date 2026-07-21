@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 // Pastikan path import ini disesuaikan dengan lokasi Anda menyimpan file SidebarJurnalis
-import SidebarJurnalis from "@/app/components/jurnalis/Sidebar";
+import SidebarJurnalis from "@/components/jurnalis/Sidebar";
 
 const COLORS = {
   primary: "#FCC200",

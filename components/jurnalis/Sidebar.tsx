@@ -76,13 +76,13 @@ export default function SidebarJurnalis({
 
       {/* Sidebar Nav */}
       <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
-        <p
+        {/* <p
           className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ml-4 text-[#C4C4C4] ${
             isSidebarOpen ? "opacity-100" : "opacity-0"
           }`}
         >
           Menu Utama
-        </p>
+        </p> */}
         {jurnalisItems.map((item) => (
           <button
             key={item.name}
