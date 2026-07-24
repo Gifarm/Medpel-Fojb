@@ -258,7 +258,7 @@ const App = () => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-[#FCC200] to-[#FDCE33] hover:from-[#FDD85C] hover:to-[#FCC200] disabled:opacity-70 disabled:cursor-not-allowed text-[#233982] font-black py-4 rounded-2xl shadow-lg shadow-[#FCC200]/25 transition-all duration-300 flex items-center justify-center gap-2 group active:scale-[0.98]"
+                  className="w-full bg-gradient-to-r from-[#233982] to-[#4F619B] hover:from-[#4F619B] hover:to-[#7281AF] text-[#FFFFFF] font-bold py-4 rounded-2xl shadow-lg shadow-[#233982]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
                   <AnimatePresence mode="wait">
                     {isLoading ? (
@@ -277,11 +277,11 @@ const App = () => {
                         exit={{ opacity: 0 }}
                         className="flex items-center gap-2"
                       >
-                        MASUK SEKARANG
-                        <ArrowRight
+                        Login
+                        {/* <ArrowRight
                           size={18}
                           className="group-hover:translate-x-1 transition-transform"
-                        />
+                        /> */}
                       </motion.div>
                     )}
                   </AnimatePresence>

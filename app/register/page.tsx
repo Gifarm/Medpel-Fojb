@@ -149,11 +149,11 @@ const App = () => {
 
             {step === 0 ? (
               <div className="space-y-6 mt-12">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FCC200]/10 rounded-full">
+                {/* <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FCC200]/10 rounded-full">
                   <span className="text-[11px] font-bold text-[#233982] uppercase tracking-wide">
                     Start Your Journey
                   </span>
-                </div>
+                </div> */}
                 <h2 className="text-[#1B1B1B] text-4xl font-black leading-tight">
                   Bergabung dengan{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FCC200] to-[#FDCE33]">
@@ -210,12 +210,6 @@ const App = () => {
               </div>
             )}
           </div>
-
-          <div className="relative z-10">
-            <div className="p-6 bg-gradient-to-br from-[#F8FAF9] to-[#F0F4FF] rounded-3xl border border-[#FFFFFF] shadow-sm">
-              {/* Placeholder for quote/testimonial */}
-            </div>
-          </div>
         </div>
 
         {/* --- RIGHT SIDE: Form Handler --- */}
@@ -257,7 +251,7 @@ const App = () => {
                       </div>
                       <div className="flex-1">
                         <h4 className="font-bold text-[#1B1B1B] text-lg">
-                          {role === "user" ? "Pembaca" : "Jurnalis Siswa"}
+                          {role === "user" ? "Member" : "Jurnalis Pelajar"}
                         </h4>
                         <p className="text-xs text-[#6B7280] mt-1 leading-relaxed">
                           {role === "user"
@@ -299,7 +293,7 @@ const App = () => {
                   <p className="text-[#6B7280] text-sm">
                     Daftar sebagai{" "}
                     <span className="font-bold text-[#FCC200] uppercase">
-                      {roleSelection === "user" ? "Pembaca" : "Jurnalis"}
+                      {roleSelection === "user" ? "Member" : "Jurnalis"}
                     </span>
                   </p>
                 </div>
@@ -328,9 +322,9 @@ const App = () => {
                   <button
                     type="button"
                     onClick={nextStep}
-                    className="w-full bg-gradient-to-r from-[#FCC200] to-[#FDCE33] hover:from-[#FDD85C] hover:to-[#FCC200] text-[#233982] font-black py-4 rounded-2xl shadow-lg shadow-[#FCC200]/25 transition-all duration-300 flex items-center justify-center gap-2 group active:scale-[0.98]"
+                    className="w-full bg-gradient-to-r from-[#233982] to-[#4F619B] hover:from-[#4F619B] hover:to-[#7281AF] text-[#FFFFFF] font-bold py-4 rounded-2xl shadow-lg shadow-[#233982]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
-                    LANJUTKAN{" "}
+                    Lanjutkan{" "}
                     <ChevronRight
                       size={18}
                       className="group-hover:translate-x-1 transition-transform"
@@ -432,17 +426,10 @@ const App = () => {
                 <div className="pt-6 flex gap-4">
                   <button
                     type="button"
-                    onClick={prevStep}
-                    className="flex-1 border-2 border-[#F8FAF9] text-[#6B7280] font-bold py-4 rounded-2xl hover:bg-[#F8FAF9] hover:text-[#1B1B1B] transition-all active:scale-[0.98]"
-                  >
-                    KEMBALI
-                  </button>
-                  <button
-                    type="button"
                     onClick={nextStep}
                     className="flex-[2] bg-gradient-to-r from-[#233982] to-[#4F619B] hover:from-[#4F619B] hover:to-[#7281AF] text-[#FFFFFF] font-bold py-4 rounded-2xl shadow-lg shadow-[#233982]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
-                    KEAMANAN <ChevronRight size={18} />
+                    Lanjutkan <ChevronRight size={18} />
                   </button>
                 </div>
               </motion.form>
@@ -497,16 +484,9 @@ const App = () => {
 
                 <div className="pt-6 flex gap-4">
                   <button
-                    type="button"
-                    onClick={prevStep}
-                    className="flex-1 border-2 border-[#F8FAF9] text-[#6B7280] font-bold py-4 rounded-2xl hover:bg-[#F8FAF9] hover:text-[#1B1B1B] transition-all active:scale-[0.98]"
-                  >
-                    BALIK
-                  </button>
-                  <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-[2] bg-gradient-to-r from-[#FCC200] to-[#FDCE33] hover:from-[#FDD85C] hover:to-[#FCC200] disabled:opacity-70 disabled:cursor-not-allowed text-[#233982] font-black py-4 rounded-2xl shadow-lg shadow-[#FCC200]/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                    className="flex-[2] bg-gradient-to-r from-[#233982] to-[#4F619B] hover:from-[#4F619B] hover:to-[#7281AF] text-[#FFFFFF] font-bold py-4 rounded-2xl shadow-lg shadow-[#233982]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
                     {isLoading ? (
                       <motion.div
@@ -520,7 +500,7 @@ const App = () => {
                       />
                     ) : (
                       <>
-                        SELESAIKAN <CheckCircle2 size={18} />
+                        Register <CheckCircle2 size={18} />
                       </>
                     )}
                   </button>
@@ -540,9 +520,9 @@ const App = () => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="w-28 h-28 bg-gradient-to-br from-[#FCC200] to-[#FDCE33] rounded-full flex items-center justify-center mb-8 relative shadow-2xl shadow-[#FCC200]/40"
+                  className="w-28 h-28 bg-gradient-to-br from-[#233982] to-[#4F619B] rounded-full flex items-center justify-center mb-8 relative shadow-2xl shadow-[#233982]/40"
                 >
-                  <div className="absolute inset-0 bg-[#FCC200] rounded-full animate-ping opacity-20" />
+                  <div className="absolute inset-0 bg-[#002afc] rounded-full animate-ping opacity-20" />
                   <CheckCircle2
                     size={52}
                     strokeWidth={2.5}
@@ -556,7 +536,7 @@ const App = () => {
                 <p className="text-[#6B7280] text-sm max-w-sm leading-relaxed mb-10">
                   {roleSelection === "jurnalis"
                     ? "Akun Jurnalis sedang ditinjau. Cek email untuk notifikasi aktivasi."
-                    : "Akun Pembaca aktif! Mulai jelajahi ribuan artikel menarik."}
+                    : "Akun Member aktif! Mulai jelajahi ribuan artikel menarik."}
                 </p>
 
                 <a

@@ -450,13 +450,13 @@ export default function Navbar() {
             ) : (
               <>
                 <button
-                  onClick={() => router.push("/masuk")}
+                  onClick={() => router.push("/login")}
                   className="px-5 py-2 text-xs font-semibold text-[#233982] border border-[#233982]/20 rounded-full hover:bg-blue-50 transition-colors"
                 >
                   Masuk
                 </button>
                 <button
-                  onClick={() => router.push("/daftar")}
+                  onClick={() => router.push("/register")}
                   className="px-5 py-2 text-xs font-semibold text-white bg-[#233982] rounded-full hover:bg-blue-800 hover:shadow-md transition-all"
                 >
                   Daftar
