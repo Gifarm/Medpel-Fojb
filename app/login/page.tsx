@@ -121,7 +121,6 @@ const App = () => {
                   </a>
                 </motion.div>
               ) : (
-                /* LOGIN FORM */
                 <motion.form
                   key="login-form"
                   initial={{ opacity: 0, x: 20 }}

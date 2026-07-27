@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // <-- IMPORT NEXT.JS ROUTER
+import { usePathname, useRouter } from "next/navigation"; // <-- TAMBAHKAN usePathname
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -27,10 +27,9 @@ import {
 } from "lucide-react";
 
 export default function Navbar() {
-  const router = useRouter(); // <-- INISIALISASI ROUTER
+  const router = useRouter();
+  const pathname = usePathname(); // <-- DETEKSI URL SAAT INI
 
-  const [activeTab, setActiveTab] = useState("Beranda");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -132,30 +131,23 @@ export default function Navbar() {
     { name: "Kegiatan Sekolah", icon: BookOpen, count: 156 },
   ];
 
-  const isCategoryActive = activeTab === "Kategori" || activeCategory !== null;
+  // <-- PERBAIKAN: Cek active berdasarkan URL, bukan state lokal
+  const isCategoryActive = pathname.startsWith("/kategori");
 
-  // Helper untuk membuat slug URL dari nama kategori (misal: "Karya Pelajar" -> "karya-pelajar")
+  // Helper untuk membuat slug URL dari nama kategori
   const createSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
   const handleCategoryClick = (categoryName: string) => {
-    setActiveTab("Kategori");
-    setActiveCategory(categoryName);
     setIsCategoryOpen(false);
     setMobileCategoryOpen(false);
     setIsMobileMenuOpen(false);
-
-    // Navigasi ke halaman kategori spesifik
     router.push(`/kategori/${createSlug(categoryName)}`);
   };
 
   const handleViewAllCategories = () => {
-    setActiveTab("Kategori");
-    setActiveCategory(null);
     setIsCategoryOpen(false);
     setMobileCategoryOpen(false);
     setIsMobileMenuOpen(false);
-
-    // Navigasi ke halaman daftar semua kategori
     router.push("/kategori");
   };
 
@@ -183,11 +175,7 @@ export default function Navbar() {
         {/* Logo & Tagline MPN */}
         <div
           className="flex items-center gap-3 cursor-pointer"
-          onClick={() => {
-            setActiveTab("Beranda");
-            setActiveCategory(null);
-            router.push("/"); // <-- NAVIGASI KE BERANDA
-          }}
+          onClick={() => router.push("/")}
         >
           <img
             src="/logomedpel.png"
@@ -198,9 +186,9 @@ export default function Navbar() {
           />
           <div className="flex flex-col justify-center">
             <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-[#233982] leading-none">
-              Med<span className="text-yellow-500">Pel</span> Network
+              Media Pelajar Network
             </h1>
-            <p className="text-[9px] md:text-[10px] uppercase tracking-[0.15em] font-bold text-yellow-400/80 leading-none mt-1">
+            <p className="text-[9px] md:text-[10px] uppercase tracking-[0.15em] font-bold text-[#233982] leading-none mt-1">
               Informasi • Fakta • Pembelajar
             </p>
           </div>
@@ -209,9 +197,10 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center bg-blue-50/50 p-1.5 rounded-2xl border border-blue-100/50">
           {navItems.map((item) => {
+            // <-- PERBAIKAN: Active state berdasarkan pathname URL
             const isActive = item.hasDropdown
               ? isCategoryActive
-              : activeTab === item.name;
+              : pathname === item.path;
 
             return (
               <div
@@ -226,12 +215,9 @@ export default function Navbar() {
                 <button
                   onClick={() => {
                     if (!item.hasDropdown) {
-                      setActiveTab(item.name);
-                      setActiveCategory(null);
-                      router.push(item.path); // <-- NAVIGASI KE PATH ITEM
+                      router.push(item.path);
                     } else {
                       setIsCategoryOpen(!isCategoryOpen);
-                      // Opsional: router.push(item.path) jika ingin langsung ke halaman induk kategori
                     }
                   }}
                   className={`relative px-5 py-2 rounded-xl text-sm font-semibold transition-colors duration-300 flex items-center gap-2 ${
@@ -292,40 +278,44 @@ export default function Navbar() {
                           Kategori Populer
                         </p>
                         <div className="grid grid-cols-2 gap-3">
-                          {popularCategories.map((cat) => (
-                            <button
-                              key={cat.name}
-                              onClick={() => handleCategoryClick(cat.name)}
-                              className={`group flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50/50 transition-all text-left border ${
-                                activeCategory === cat.name
-                                  ? "border-blue-200 bg-blue-50"
-                                  : "border-transparent hover:border-blue-100"
-                              }`}
-                            >
-                              <div
-                                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform`}
+                          {popularCategories.map((cat) => {
+                            const isCatActive =
+                              pathname === `/kategori/${createSlug(cat.name)}`;
+                            return (
+                              <button
+                                key={cat.name}
+                                onClick={() => handleCategoryClick(cat.name)}
+                                className={`group flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50/50 transition-all text-left border ${
+                                  isCatActive
+                                    ? "border-blue-200 bg-blue-50"
+                                    : "border-transparent hover:border-blue-100"
+                                }`}
                               >
-                                <cat.icon size={18} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p
-                                  className={`font-bold text-sm transition-colors truncate ${
-                                    activeCategory === cat.name
-                                      ? "text-[#233982]"
-                                      : "text-gray-800 group-hover:text-[#233982]"
-                                  }`}
+                                <div
+                                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform`}
                                 >
-                                  {cat.name}
-                                </p>
-                                <p className="text-[11px] text-gray-500 truncate">
-                                  {cat.desc}
-                                </p>
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {cat.count}
-                              </span>
-                            </button>
-                          ))}
+                                  <cat.icon size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className={`font-bold text-sm transition-colors truncate ${
+                                      isCatActive
+                                        ? "text-[#233982]"
+                                        : "text-gray-800 group-hover:text-[#233982]"
+                                    }`}
+                                  >
+                                    {cat.name}
+                                  </p>
+                                  <p className="text-[11px] text-gray-500 truncate">
+                                    {cat.desc}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                  {cat.count}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -335,29 +325,33 @@ export default function Navbar() {
                           Semua Kategori
                         </p>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          {allCategories.map((cat) => (
-                            <button
-                              key={cat.name}
-                              onClick={() => handleCategoryClick(cat.name)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left group ${
-                                activeCategory === cat.name
-                                  ? "bg-blue-50 text-[#233982]"
-                                  : "text-gray-600 hover:bg-blue-50 hover:text-[#233982]"
-                              }`}
-                            >
-                              <cat.icon
-                                size={14}
-                                className={
-                                  activeCategory === cat.name
-                                    ? "text-blue-600"
-                                    : "text-gray-400 group-hover:text-blue-600"
-                                }
-                              />
-                              <span className="font-medium truncate flex-1">
-                                {cat.name}
-                              </span>
-                            </button>
-                          ))}
+                          {allCategories.map((cat) => {
+                            const isCatActive =
+                              pathname === `/kategori/${createSlug(cat.name)}`;
+                            return (
+                              <button
+                                key={cat.name}
+                                onClick={() => handleCategoryClick(cat.name)}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left group ${
+                                  isCatActive
+                                    ? "bg-blue-50 text-[#233982]"
+                                    : "text-gray-600 hover:bg-blue-50 hover:text-[#233982]"
+                                }`}
+                              >
+                                <cat.icon
+                                  size={14}
+                                  className={
+                                    isCatActive
+                                      ? "text-blue-600"
+                                      : "text-gray-400 group-hover:text-blue-600"
+                                  }
+                                />
+                                <span className="font-medium truncate flex-1">
+                                  {cat.name}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -456,7 +450,7 @@ export default function Navbar() {
                   Masuk
                 </button>
                 <button
-                  onClick={() => router.push("/registered")}
+                  onClick={() => router.push("/register")}
                   className="px-5 py-2 text-xs font-semibold text-white bg-[#233982] rounded-full hover:bg-blue-800 hover:shadow-md transition-all"
                 >
                   Daftar
@@ -488,9 +482,10 @@ export default function Navbar() {
           >
             <div className="container mx-auto px-4 py-4 space-y-2">
               {navItems.map((item) => {
+                // <-- PERBAIKAN: Active state berdasarkan pathname URL
                 const isActive = item.hasDropdown
                   ? isCategoryActive
-                  : activeTab === item.name;
+                  : pathname === item.path;
 
                 return (
                   <div key={item.name}>
@@ -499,10 +494,8 @@ export default function Navbar() {
                         if (item.hasDropdown) {
                           handleMobileCategoryToggle();
                         } else {
-                          setActiveTab(item.name);
-                          setActiveCategory(null);
                           setIsMobileMenuOpen(false);
-                          router.push(item.path); // <-- NAVIGASI MOBILE
+                          router.push(item.path);
                         }
                       }}
                       className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
@@ -547,33 +540,38 @@ export default function Navbar() {
                                 Kategori Populer
                               </p>
                               <div className="space-y-1">
-                                {popularCategories.map((cat) => (
-                                  <button
-                                    key={cat.name}
-                                    onClick={() =>
-                                      handleCategoryClick(cat.name)
-                                    }
-                                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all duration-200 ${
-                                      activeCategory === cat.name
-                                        ? "bg-blue-50 text-[#233982] shadow-sm"
-                                        : "text-gray-600 hover:bg-gray-50"
-                                    }`}
-                                  >
-                                    <div
-                                      className={`w-9 h-9 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-white flex-shrink-0`}
+                                {popularCategories.map((cat) => {
+                                  const isCatActive =
+                                    pathname ===
+                                    `/kategori/${createSlug(cat.name)}`;
+                                  return (
+                                    <button
+                                      key={cat.name}
+                                      onClick={() =>
+                                        handleCategoryClick(cat.name)
+                                      }
+                                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all duration-200 ${
+                                        isCatActive
+                                          ? "bg-blue-50 text-[#233982] shadow-sm"
+                                          : "text-gray-600 hover:bg-gray-50"
+                                      }`}
                                     >
-                                      <cat.icon size={16} />
-                                    </div>
-                                    <div className="flex-1 text-left min-w-0">
-                                      <p className="font-semibold text-sm truncate">
-                                        {cat.name}
-                                      </p>
-                                      <p className="text-[11px] text-gray-500 truncate">
-                                        {cat.desc}
-                                      </p>
-                                    </div>
-                                  </button>
-                                ))}
+                                      <div
+                                        className={`w-9 h-9 rounded-lg bg-gradient-to-br ${cat.color} flex items-center justify-center text-white flex-shrink-0`}
+                                      >
+                                        <cat.icon size={16} />
+                                      </div>
+                                      <div className="flex-1 text-left min-w-0">
+                                        <p className="font-semibold text-sm truncate">
+                                          {cat.name}
+                                        </p>
+                                        <p className="text-[11px] text-gray-500 truncate">
+                                          {cat.desc}
+                                        </p>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
 
@@ -582,31 +580,36 @@ export default function Navbar() {
                                 Semua Kategori
                               </p>
                               <div className="grid grid-cols-2 gap-1">
-                                {allCategories.map((cat) => (
-                                  <button
-                                    key={cat.name}
-                                    onClick={() =>
-                                      handleCategoryClick(cat.name)
-                                    }
-                                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
-                                      activeCategory === cat.name
-                                        ? "bg-blue-50 text-[#233982]"
-                                        : "text-gray-600 hover:bg-gray-50"
-                                    }`}
-                                  >
-                                    <cat.icon
-                                      size={14}
-                                      className={
-                                        activeCategory === cat.name
-                                          ? "text-blue-600"
-                                          : "text-gray-400"
+                                {allCategories.map((cat) => {
+                                  const isCatActive =
+                                    pathname ===
+                                    `/kategori/${createSlug(cat.name)}`;
+                                  return (
+                                    <button
+                                      key={cat.name}
+                                      onClick={() =>
+                                        handleCategoryClick(cat.name)
                                       }
-                                    />
-                                    <span className="font-medium truncate">
-                                      {cat.name}
-                                    </span>
-                                  </button>
-                                ))}
+                                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+                                        isCatActive
+                                          ? "bg-blue-50 text-[#233982]"
+                                          : "text-gray-600 hover:bg-gray-50"
+                                      }`}
+                                    >
+                                      <cat.icon
+                                        size={14}
+                                        className={
+                                          isCatActive
+                                            ? "text-blue-600"
+                                            : "text-gray-400"
+                                        }
+                                      />
+                                      <span className="font-medium truncate">
+                                        {cat.name}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
@@ -662,13 +665,13 @@ export default function Navbar() {
                 ) : (
                   <div className="flex gap-3">
                     <button
-                      onClick={() => router.push("/masuk")}
+                      onClick={() => router.push("/login")}
                       className="flex-1 py-3 text-sm font-semibold text-[#233982] border border-[#233982]/20 rounded-xl hover:bg-blue-50 transition-colors"
                     >
                       Masuk
                     </button>
                     <button
-                      onClick={() => router.push("/daftar")}
+                      onClick={() => router.push("/register")}
                       className="flex-1 py-3 text-sm font-semibold text-white bg-[#233982] rounded-xl hover:bg-blue-800 transition-colors"
                     >
                       Daftar

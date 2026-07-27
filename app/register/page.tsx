@@ -14,6 +14,7 @@ import {
   Megaphone,
   ArrowLeft,
 } from "lucide-react";
+import { useRouter } from "next/navigation"; // <-- TAMBAHKAN INI
 
 // --- UI Components Helper ---
 const FormInput = ({
@@ -40,7 +41,7 @@ const FormInput = ({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full bg-[#FFFFFF] text-[#1B1B1B] border-2 border-[#e1e2e2] rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium 
+        className="w-full bg-[#FFFFFF] text-[#252222] border-2 border-[#e1e2e2] rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium 
                    focus:bg-[#FFFEF5] focus:border-[#FCC200] focus:ring-4 focus:ring-[#FCC200]/10 outline-none transition-all duration-300 placeholder:text-[#C4C4C4]"
       />
     </div>
@@ -49,11 +50,13 @@ const FormInput = ({
 
 // --- Main Component ---
 const App = () => {
+  const router = useRouter(); // <-- INISIALISASI ROUTER
   const [roleSelection, setRoleSelection] = useState<
-    "user" | "jurnalis" | "kol" | null
+    "MEMBER" | "JURNALIS" | "KOL" | null
   >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState(""); // <-- SIMPAN EMAIL
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -61,21 +64,41 @@ const App = () => {
     password: "",
   });
 
+  const handleRoleSelect = (role: "MEMBER" | "JURNALIS" | "KOL") => {
+    setRoleSelection(role);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleRoleSelect = (role: "user" | "jurnalis" | "kol") => {
-    setRoleSelection(role);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!roleSelection) return;
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+          role: roleSelection,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Registrasi gagal");
+
+      setRegisteredEmail(formData.email);
       setIsSuccess(true);
-    }, 1500);
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,20 +151,24 @@ const App = () => {
                   <p className="text-[#6B7280] text-sm max-w-xs mb-8 leading-relaxed">
                     Akun Anda sebagai{" "}
                     <span className="font-bold text-[#233982]">
-                      {roleSelection === "jurnalis"
-                        ? "Jurnalis"
-                        : roleSelection === "kol"
+                      {roleSelection === "JURNALIS"
+                        ? "JURNALIS"
+                        : roleSelection === "KOL"
                           ? "KOL"
                           : "Member"}
                     </span>{" "}
                     telah dibuat.
                   </p>
-                  <a
-                    href="/login"
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/otp?email=${encodeURIComponent(registeredEmail)}`,
+                      )
+                    }
                     className="w-full max-w-xs bg-[#233982] text-white font-bold py-3.5 rounded-2xl hover:bg-[#4F619B] transition-all active:scale-[0.98]"
                   >
-                    MASUK SEKARANG
-                  </a>
+                    VERIFIKASI OTP
+                  </button>
                 </motion.div>
               ) : !roleSelection ? (
                 /* STEP 0: ROLE SELECTION */
@@ -163,7 +190,7 @@ const App = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {(["user", "jurnalis", "kol"] as const).map((role) => (
+                    {(["MEMBER", "JURNALIS", "KOL"] as const).map((role) => (
                       <button
                         key={role}
                         onClick={() => handleRoleSelect(role)}
@@ -171,16 +198,16 @@ const App = () => {
                       >
                         <div
                           className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 ${
-                            role === "user"
+                            role === "MEMBER"
                               ? "bg-gradient-to-br from-[#4F619B]/10 to-[#7281AF]/10 text-[#4F619B]"
-                              : role === "jurnalis"
+                              : role === "JURNALIS"
                                 ? "bg-gradient-to-br from-[#FCC200]/30 to-[#FDCE33]/20 text-[#233982]"
                                 : "bg-gradient-to-br from-[#233982]/10 to-[#4F619B]/20 text-[#233982]"
                           }`}
                         >
-                          {role === "user" ? (
+                          {role === "MEMBER" ? (
                             <BookOpen size={22} />
-                          ) : role === "jurnalis" ? (
+                          ) : role === "JURNALIS" ? (
                             <PenTool size={22} />
                           ) : (
                             <Megaphone size={22} />
@@ -188,16 +215,16 @@ const App = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-[#1B1B1B] text-sm sm:text-base">
-                            {role === "user"
+                            {role === "MEMBER"
                               ? "Member"
-                              : role === "jurnalis"
+                              : role === "JURNALIS"
                                 ? "Jurnalis Pelajar"
                                 : "Key Opinion Leader"}
                           </h4>
                           <p className="text-[11px] sm:text-xs text-[#6B7280] mt-0.5 leading-relaxed line-clamp-2">
-                            {role === "user"
+                            {role === "MEMBER"
                               ? "Baca artikel, blog, dan berinteraksi."
-                              : role === "jurnalis"
+                              : role === "JURNALIS"
                                 ? "Tulis artikel, unggah karya, bangun portofolio."
                                 : "Buat konten, bangun pengaruh, dan kolaborasi."}
                           </p>
