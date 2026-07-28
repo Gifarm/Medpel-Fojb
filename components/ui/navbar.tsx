@@ -1,7 +1,9 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import React, { useState, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation"; // <-- TAMBAHKAN usePathname
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Home,
@@ -14,6 +16,7 @@ import {
   Menu,
   X,
   UserCircle,
+  User,
   BarChart3,
   GraduationCap,
   Trophy,
@@ -24,17 +27,30 @@ import {
   Calendar,
   ArrowRight,
   Newspaper,
+  LogOut,
 } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
-  const pathname = usePathname(); // <-- DETEKSI URL SAAT INI
+  const pathname = usePathname();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<any>(null); // <-- GANTI: Simpan data user, bukan boolean
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
+
+  // <-- BARU: Cek status login dari localStorage saat komponen mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        localStorage.removeItem("user");
+      }
+    }
+  }, []);
 
   // OPTIMASI: Scroll listener dengan requestAnimationFrame
   useEffect(() => {
@@ -60,7 +76,7 @@ export default function Navbar() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-category-dropdown]")) {
+      if (!target.closest("[data-dropdown]")) {
         setIsCategoryOpen(false);
       }
     };
@@ -74,6 +90,14 @@ export default function Navbar() {
       setMobileCategoryOpen(false);
     }
   }, [isMobileMenuOpen]);
+
+  // <-- BARU: Fungsi Logout
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    router.push("/");
+    setIsMobileMenuOpen(false);
+  };
 
   // --- ROUTING MAPPING ---
   const navItems = [
@@ -131,10 +155,7 @@ export default function Navbar() {
     { name: "Kegiatan Sekolah", icon: BookOpen, count: 156 },
   ];
 
-  // <-- PERBAIKAN: Cek active berdasarkan URL, bukan state lokal
   const isCategoryActive = pathname.startsWith("/kategori");
-
-  // Helper untuk membuat slug URL dari nama kategori
   const createSlug = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 
   const handleCategoryClick = (categoryName: string) => {
@@ -197,16 +218,14 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center bg-blue-50/50 p-1.5 rounded-2xl border border-blue-100/50">
           {navItems.map((item) => {
-            // <-- PERBAIKAN: Active state berdasarkan pathname URL
             const isActive = item.hasDropdown
               ? isCategoryActive
               : pathname === item.path;
-
             return (
               <div
                 key={item.name}
                 className="relative"
-                data-category-dropdown
+                data-dropdown
                 onMouseEnter={() => item.hasDropdown && setIsCategoryOpen(true)}
                 onMouseLeave={() =>
                   item.hasDropdown && setIsCategoryOpen(false)
@@ -260,9 +279,8 @@ export default function Navbar() {
                       exit={{ opacity: 0, y: 10, scale: 0.98 }}
                       transition={{ duration: 0.2, ease: "easeOut" }}
                       className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[640px] bg-white rounded-2xl shadow-xl border border-blue-100 overflow-hidden z-50"
-                      data-category-dropdown
+                      data-dropdown
                     >
-                      {/* Header Dropdown */}
                       <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-white border-b border-blue-50">
                         <h3 className="font-bold text-sm text-[#233982]">
                           Jelajahi Topik Favorit Pelajar
@@ -271,8 +289,6 @@ export default function Navbar() {
                           Temukan berita, karya, dan event sesuai minat kamu
                         </p>
                       </div>
-
-                      {/* Kategori Populer */}
                       <div className="px-6 py-5 border-b border-gray-100">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                           Kategori Populer
@@ -298,11 +314,7 @@ export default function Navbar() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p
-                                    className={`font-bold text-sm transition-colors truncate ${
-                                      isCatActive
-                                        ? "text-[#233982]"
-                                        : "text-gray-800 group-hover:text-[#233982]"
-                                    }`}
+                                    className={`font-bold text-sm transition-colors truncate ${isCatActive ? "text-[#233982]" : "text-gray-800 group-hover:text-[#233982]"}`}
                                   >
                                     {cat.name}
                                   </p>
@@ -318,8 +330,6 @@ export default function Navbar() {
                           })}
                         </div>
                       </div>
-
-                      {/* Semua Kategori */}
                       <div className="px-6 py-5">
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                           Semua Kategori
@@ -354,8 +364,6 @@ export default function Navbar() {
                           })}
                         </div>
                       </div>
-
-                      {/* Footer Dropdown */}
                       <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                         <p className="text-xs text-gray-500">
                           Total{" "}
@@ -396,52 +404,59 @@ export default function Navbar() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden sm:flex items-center gap-3">
-            {isLoggedIn ? (
-              <div className="relative group">
+            {user ? (
+              // <-- BARU: Tampilan jika SUDAH LOGIN (Profile Dropdown)
+              <div className="relative group" data-dropdown>
                 <button className="flex items-center gap-2 p-1 pr-3 bg-white border border-gray-200 rounded-full hover:shadow-md transition-shadow">
-                  <div className="w-8 h-8 rounded-full bg-[#233982] flex items-center justify-center text-white text-xs font-bold">
-                    U
+                  {/* Ikon Profile Generik Melingkar */}
+                  <div className="w-8 h-8 rounded-full bg-[#233982] flex items-center justify-center text-white">
+                    <User size={18} />
                   </div>
-                  <span className="text-xs font-semibold text-gray-700">
-                    Profil
+                  <span className="text-xs font-semibold text-gray-700 max-w-[80px] truncate">
+                    {user.name}
                   </span>
                   <ChevronDown size={14} className="text-gray-400" />
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <div className="p-4 border-b border-gray-100">
-                    <p className="text-sm font-bold text-gray-800">
-                      User Pelajar
+
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden">
+                  <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                    <p className="text-sm font-bold text-gray-800 truncate">
+                      {user.name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      user@mediapelajar.id
+                    <p className="text-xs text-gray-500 truncate">
+                      {user.email}
                     </p>
+                    <span className="inline-block mt-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#233982]/10 text-[#233982] rounded-md">
+                      {user.role}
+                    </span>
                   </div>
                   <div className="p-2">
                     <button
                       onClick={() => router.push("/profil")}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                     >
-                      <UserCircle size={16} /> Edit Profil
+                      <UserCircle size={16} /> Profil Saya
                     </button>
+                    {user.role !== "MEMBER" && (
+                      <button
+                        onClick={() => router.push("/dashboard")}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        <BarChart3 size={16} /> Dashboard
+                      </button>
+                    )}
                     <button
-                      onClick={() => router.push("/profil/komentar")}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      <BarChart3 size={16} /> Riwayat Komentar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsLoggedIn(false);
-                        router.push("/");
-                      }}
+                      onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     >
-                      <X size={16} /> Logout
+                      <LogOut size={16} /> Keluar
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
+              // <-- Tampilan jika BELUM LOGIN
               <>
                 <button
                   onClick={() => router.push("/login")}
@@ -482,11 +497,9 @@ export default function Navbar() {
           >
             <div className="container mx-auto px-4 py-4 space-y-2">
               {navItems.map((item) => {
-                // <-- PERBAIKAN: Active state berdasarkan pathname URL
                 const isActive = item.hasDropdown
                   ? isCategoryActive
                   : pathname === item.path;
-
                 return (
                   <div key={item.name}>
                     <button
@@ -524,7 +537,6 @@ export default function Navbar() {
                       )}
                     </button>
 
-                    {/* Mobile Category Accordion */}
                     <AnimatePresence>
                       {item.hasDropdown && mobileCategoryOpen && (
                         <motion.div
@@ -574,7 +586,6 @@ export default function Navbar() {
                                 })}
                               </div>
                             </div>
-
                             <div className="border-t border-gray-100 pt-3">
                               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 py-2">
                                 Semua Kategori
@@ -631,47 +642,69 @@ export default function Navbar() {
                   />
                 </div>
 
-                {isLoggedIn ? (
+                {user ? (
+                  // <-- BARU: Tampilan Mobile jika SUDAH LOGIN
                   <div className="space-y-2">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                      <div className="w-10 h-10 rounded-full bg-[#233982] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                        U
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="w-10 h-10 rounded-full bg-[#233982] flex items-center justify-center text-white flex-shrink-0">
+                        <User size={20} />
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-800">
-                          User Pelajar
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-gray-800 truncate">
+                          {user.name}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          user@mediapelajar.id
+                        <p className="text-xs text-gray-500 truncate">
+                          {user.email}
                         </p>
+                        <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#233982]/10 text-[#233982] rounded-md">
+                          {user.role}
+                        </span>
                       </div>
                     </div>
                     <button
-                      onClick={() => router.push("/profil")}
+                      onClick={() => {
+                        router.push("/profil");
+                        setIsMobileMenuOpen(false);
+                      }}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
                     >
-                      <UserCircle size={16} /> Edit Profil
+                      <UserCircle size={16} /> Profil Saya
                     </button>
+                    {user.role !== "MEMBER" && (
+                      <button
+                        onClick={() => {
+                          router.push("/dashboard");
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
+                      >
+                        <BarChart3 size={16} /> Dashboard
+                      </button>
+                    )}
                     <button
-                      onClick={() => {
-                        setIsLoggedIn(false);
-                        router.push("/");
-                      }}
+                      onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                     >
-                      <X size={16} /> Logout
+                      <LogOut size={16} /> Keluar
                     </button>
                   </div>
                 ) : (
+                  // Tampilan Mobile jika BELUM LOGIN
                   <div className="flex gap-3">
                     <button
-                      onClick={() => router.push("/login")}
+                      onClick={() => {
+                        router.push("/login");
+                        setIsMobileMenuOpen(false);
+                      }}
                       className="flex-1 py-3 text-sm font-semibold text-[#233982] border border-[#233982]/20 rounded-xl hover:bg-blue-50 transition-colors"
                     >
                       Masuk
                     </button>
                     <button
-                      onClick={() => router.push("/register")}
+                      onClick={() => {
+                        router.push("/register");
+                        setIsMobileMenuOpen(false);
+                      }}
                       className="flex-1 py-3 text-sm font-semibold text-white bg-[#233982] rounded-xl hover:bg-blue-800 transition-colors"
                     >
                       Daftar

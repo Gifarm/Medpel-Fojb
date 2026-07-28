@@ -3,7 +3,8 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, CheckCircle2 } from "lucide-react";
+import { Mail, Lock, CheckCircle2, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // --- UI Components Helper (Sama persis dengan Register) ---
 const FormInput = ({
@@ -39,8 +40,10 @@ const FormInput = ({
 
 // --- Main Component ---
 const App = () => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [formData, setFormData] = useState({
     email: "",
@@ -49,17 +52,58 @@ const App = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Clear error saat user mulai mengetik lagi
+    if (errorMessage) setErrorMessage("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
+
+    // Validasi sederhana di FE
+    if (!formData.email || !formData.password) {
+      setErrorMessage("Email dan password wajib diisi");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulasi proses login
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Jika email belum terverifikasi, redirect ke halaman OTP
+        if (data.needVerification && data.email) {
+          router.push(`/otp?email=${encodeURIComponent(data.email)}`);
+          return;
+        }
+        throw new Error(data.error || "Login gagal");
+      }
+
+      // Login berhasil
       setIsSuccess(true);
-      // Di sini Anda bisa menambahkan logika redirect, misal: router.push('/dashboard')
-    }, 1500);
+
+      // Simpan data user ke localStorage (opsional, untuk session sederhana)
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect ke dashboard setelah 1.5 detik
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1500);
+    } catch (error: any) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -139,7 +183,25 @@ const App = () => {
                     </p>
                   </div>
 
-                  <div className="space-y-3 sm:space-y-4 flex-1">
+                  {/* Error Message Display */}
+                  <AnimatePresence>
+                    {errorMessage && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs font-medium"
+                      >
+                        <AlertCircle
+                          size={16}
+                          className="flex-shrink-0 mt-0.5"
+                        />
+                        <span>{errorMessage}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <div className="mt-4 space-y-3 sm:space-y-4 flex-1">
                     <FormInput
                       icon={Mail}
                       label="Email"
@@ -175,22 +237,22 @@ const App = () => {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full bg-gradient-to-r from-[#233982] to-[#4F619B] hover:from-[#4F619B] hover:to-[#7281AF] text-[#FFFFFF] font-bold py-3.5 rounded-2xl shadow-lg shadow-[#233982]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                      className="w-full bg-gradient-to-r from-[#233982] to-[#4F619B] hover:from-[#4F619B] hover:to-[#7281AF] text-[#FFFFFF] font-bold py-3.5 rounded-2xl shadow-lg shadow-[#233982]/20 transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                       {isLoading ? "Memproses..." : "Masuk Sekarang"}
                     </button>
 
                     {/* Divider */}
-                    <div className="relative flex py-1 items-center">
+                    {/* <div className="relative flex py-1 items-center">
                       <div className="flex-grow border-t border-[#F8FAF9]"></div>
                       <span className="flex-shrink-0 mx-4 text-[#C4C4C4] text-[10px] font-bold uppercase tracking-widest">
                         atau
                       </span>
                       <div className="flex-grow border-t border-[#F8FAF9]"></div>
-                    </div>
+                    </div> */}
 
                     {/* Google Login Button */}
-                    <button
+                    {/* <button
                       type="button"
                       className="w-full bg-[#FFFFFF] border-2 border-[#aaaeac] hover:border-[#C4C4C4] hover:bg-[#FAFAFA] text-[#1B1B1B] font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] group"
                     >
@@ -218,7 +280,7 @@ const App = () => {
                       <span className="text-sm group-hover:text-[#233982] transition-colors">
                         Masuk dengan Google
                       </span>
-                    </button>
+                    </button> */}
                   </div>
                 </motion.form>
               )}

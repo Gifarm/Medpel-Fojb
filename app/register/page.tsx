@@ -248,7 +248,7 @@ const App = () => {
                   onSubmit={handleSubmit}
                   className="absolute inset-0 flex flex-col"
                 >
-                  <div className="space-y-3 sm:space-y-4 flex-1">
+                  <div className="mt-8 space-y-3 sm:space-y-4 flex-1">
                     <FormInput
                       icon={User}
                       label="Nama Lengkap"
@@ -298,16 +298,16 @@ const App = () => {
                     </div>
 
                     {/* Divider */}
-                    <div className="relative flex py-1 items-center">
+                    {/* <div className="relative flex py-1 items-center">
                       <div className="flex-grow border-t border-[#F8FAF9]"></div>
                       <span className="flex-shrink-0 mx-4 text-[#C4C4C4] text-[10px] font-bold uppercase tracking-widest">
                         atau
                       </span>
                       <div className="flex-grow border-t border-[#F8FAF9]"></div>
-                    </div>
+                    </div> */}
 
                     {/* Google Login Button */}
-                    <button
+                    {/* <button
                       type="button"
                       className="w-full bg-[#FFFFFF] border-2 border-[#aaaeac] hover:border-[#C4C4C4] hover:bg-[#FAFAFA] text-[#1B1B1B] font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] group"
                     >
@@ -335,7 +335,7 @@ const App = () => {
                       <span className="text-sm group-hover:text-[#233982] transition-colors">
                         Daftar dengan Google
                       </span>
-                    </button>
+                    </button> */}
                   </div>
                 </motion.form>
               )}

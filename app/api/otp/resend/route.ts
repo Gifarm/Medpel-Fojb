@@ -36,17 +36,17 @@ export async function POST(req: Request) {
       },
     });
 
-    // Kirim email ulang
-    const emailSent = await sendOtpEmail(user.email, otpCode);
-
-    if (!emailSent) {
+    // Kirim email ulang - wrap dengan try-catch karena return void
+    try {
+      await sendOtpEmail(user.email, otpCode);
+    } catch (emailError) {
+      console.error("Failed to send email:", emailError);
       return NextResponse.json(
         { error: "Gagal mengirim email" },
         { status: 500 },
       );
     }
 
-    // ✅ Hapus console.log, ganti dengan return data yang jelas
     return NextResponse.json({
       success: true,
       message: "OTP baru telah dikirim ke email Anda",
