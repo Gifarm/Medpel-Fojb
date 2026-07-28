@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 // Pastikan path import ini disesuaikan dengan lokasi Anda menyimpan file Sidebar di atas
-import Sidebar from "@/app/components/admin/Sidebar";
+import Sidebar from "@/components/admin/Sidebar";
 
 const COLORS = {
   primary: "#FCC200",
