@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   Home,
   FilePlus,
@@ -11,19 +12,6 @@ import {
   LogOut,
   ChevronRight,
 } from "lucide-react";
-
-const COLORS = {
-  primary: "#FCC200",
-  primarySoft: "#FDCE33",
-  primaryLight: "#FDD85C",
-  blueDark: "#233982",
-  blue: "#4F619B",
-  blueLight: "#7281AF",
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-  white: "#FFFFFF",
-  bg: "#f8faf9",
-};
 
 interface SidebarJurnalisProps {
   activeTab: string;
@@ -38,69 +26,78 @@ export default function SidebarJurnalis({
   isSidebarOpen,
   setIsSidebarOpen,
 }: SidebarJurnalisProps) {
+  const router = useRouter();
+
   // Menu disesuaikan persis dengan spesifikasi PRD Dashboard Jurnalis
   const jurnalisItems = [
-    { name: "Dashboard", icon: Home }, // Opsional: Sebagai halaman overview ringkas
+    { name: "Dashboard", icon: Home },
     { name: "Tulis Artikel", icon: FilePlus },
     { name: "Artikel Saya", icon: FileText },
-    { name: "Notifikasi", icon: Bell }, // Ditambahkan sesuai PRD (Revisi/Feedback Admin)
-    { name: "Pengaturan Akun", icon: Settings }, // Disesuaikan namanya dengan PRD
+    { name: "Notifikasi", icon: Bell },
+    { name: "Pengaturan Akun", icon: Settings },
   ];
+
+  // Fungsi Logout
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
 
   return (
     <motion.aside
       initial={false}
       animate={{ width: isSidebarOpen ? 280 : 80 }}
-      className="fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#C4C4C4]/50 z-50 flex flex-col transition-all duration-300"
+      className="fixed left-0 top-0 h-full bg-[#FFFFFF] border-r border-[#C4C4C4]/30 z-50 flex flex-col shadow-xl shadow-[#233982]/5 transition-all duration-300"
     >
-      {/* Sidebar Logo */}
-      <div className="p-6 flex items-center gap-3">
-        <AnimatePresence>
-          {isSidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="overflow-hidden whitespace-nowrap"
-            >
-              <h1 className="font-bold text-[#233982]">
-                MedPel <span className="text-[#C4C4C4]">Jurnalis</span>
-              </h1>
-              <p className="text-[10px] text-[#233982]/60 font-bold uppercase tracking-widest leading-none">
-                Writer Portal
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 1. Sidebar Header & Logo */}
+      <div className="h-20 flex items-center justify-center border-b border-[#C4C4C4]/50 px-4 transition-all duration-300">
+        <div className="flex items-center gap-3">
+          {/* Logo selalu muncul, ukurannya konsisten */}
+          <img
+            src="/logomedpel.png"
+            alt="MedPel Logo"
+            className="w-10 h-10 object-contain flex-shrink-0 transition-all duration-300"
+          />
+
+          {/* Teks hanya muncul saat sidebar terbuka */}
+          <AnimatePresence>
+            {isSidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                className="overflow-hidden whitespace-nowrap"
+              >
+                <h1 className="font-black text-lg text-[#233982] leading-tight">
+                  Media <span className="text-[#FCC200]">Pelajar</span>
+                </h1>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* Sidebar Nav */}
-      <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
-        {/* <p
-          className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 ml-4 text-[#C4C4C4] ${
-            isSidebarOpen ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Menu Utama
-        </p> */}
+      {/* 2. Sidebar Navigation */}
+      <div className="flex-1 px-3 py-6 space-y-1.5 overflow-y-auto no-scrollbar">
         {jurnalisItems.map((item) => (
           <button
             key={item.name}
             onClick={() => setActiveTab(item.name)}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
               activeTab === item.name
                 ? "bg-[#FCC200]/10 text-[#233982]"
-                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]/70"
+                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]"
             }`}
           >
             <item.icon
               size={20}
-              className={
+              className={`flex-shrink-0 transition-colors ${
                 activeTab === item.name
                   ? "text-[#233982]"
-                  : "group-hover:text-[#1B1B1B]/70"
-              }
+                  : "group-hover:text-[#1B1B1B]"
+              }`}
             />
+
             <AnimatePresence>
               {isSidebarOpen && (
                 <motion.span
@@ -113,58 +110,79 @@ export default function SidebarJurnalis({
                 </motion.span>
               )}
             </AnimatePresence>
+
+            {/* Active Indicator (Aksen Khas Jurnalis: #FCC200) */}
             {activeTab === item.name && (
               <motion.div
                 layoutId="sidebar-jurnalis-active"
-                className="absolute left-0 w-1.5 h-6 rounded-r-full bg-[#FCC200]"
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-[#FCC200]"
               />
             )}
           </button>
         ))}
       </div>
 
-      {/* Sidebar Footer */}
-      <div className="p-4 mt-auto space-y-2">
-        <div
-          className={`flex items-center gap-3 p-3 bg-[#C4C4C4]/10 rounded-2xl transition-all ${
-            !isSidebarOpen ? "justify-center" : ""
-          }`}
-        >
+      {/* 3. Sidebar Footer & Logout */}
+      <div className="p-4 mt-auto border-t border-[#C4C4C4]/20">
+        {/* Optional: Mini Profile Info (akan hilang rapi saat collapsed) */}
+        {/* <AnimatePresence>
           {isSidebarOpen && (
-            <div className="overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-3 p-3 bg-[#FCC200]/10 rounded-xl overflow-hidden"
+            >
               <p className="text-xs font-bold text-[#1B1B1B] truncate">
                 Jurnalis Aktif
               </p>
               <p className="text-[10px] text-[#233982] uppercase font-black flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 Online
               </p>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence> */}
+
         <button
-          className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-red-400 hover:bg-red-50 transition-all ${
-            !isSidebarOpen ? "justify-center" : ""
+          onClick={handleLogout}
+          className={`w-full flex items-center transition-all duration-300 rounded-xl text-red-500 hover:bg-red-50 group ${
+            // KUNCI: Saat tertutup, justify-center & px-0 agar icon benar-benar di tengah
+            !isSidebarOpen
+              ? "justify-center px-0 py-3"
+              : "justify-start px-4 py-3 gap-4"
           }`}
         >
-          <LogOut size={18} />
-          {isSidebarOpen && (
-            <span className="text-xs font-bold uppercase whitespace-nowrap">
-              Keluar
-            </span>
-          )}
+          <LogOut
+            size={20}
+            className="flex-shrink-0 group-hover:scale-110 transition-transform duration-200"
+          />
+
+          <AnimatePresence>
+            {isSidebarOpen && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-sm font-bold uppercase whitespace-nowrap"
+              >
+                Logout
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
       </div>
 
-      {/* Toggle Sidebar Button */}
+      {/* 4. Toggle Sidebar Button */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="absolute -right-3 top-12 w-6 h-6 bg-[#FFFFFF] border border-[#C4C4C4]/20 shadow-md rounded-full flex items-center justify-center text-[#C4C4C4] hover:text-[#233982] transition-colors"
+        className="absolute -right-3 top-10 w-6 h-6 bg-[#FFFFFF] border border-[#C4C4C4]/30 shadow-md rounded-full flex items-center justify-center text-[#C4C4C4] hover:text-[#233982] hover:border-[#233982]/30 transition-all duration-300 z-50"
+        aria-label="Toggle Sidebar"
       >
-        {isSidebarOpen ? (
-          <ChevronRight className="rotate-180" size={12} />
-        ) : (
-          <ChevronRight size={12} />
-        )}
+        <ChevronRight
+          size={14}
+          className={`transition-transform duration-300 ${isSidebarOpen ? "rotate-180" : "rotate-0"}`}
+        />
       </button>
     </motion.aside>
   );

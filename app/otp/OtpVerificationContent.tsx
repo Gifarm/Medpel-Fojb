@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, RefreshCw } from "lucide-react";
+import toast from "react-hot-toast"; // <-- TAMBAHKAN IMPORT INI
 
 // --- OTP Box Component ---
 const OtpBox = ({
@@ -44,7 +45,7 @@ const OtpBox = ({
     const pastedData = e.clipboardData
       .getData("text")
       .replace(/\D/g, "")
-      .slice(0, 4); // 🔥 UBAH: Maksimal 4 digit
+      .slice(0, 4);
 
     if (pastedData) {
       const inputs = inputRef.current?.parentElement?.querySelectorAll("input");
@@ -56,7 +57,7 @@ const OtpBox = ({
             input.dispatchEvent(new Event("input", { bubbles: true }));
           }
         });
-        const nextIndex = Math.min(pastedData.length, 3); // 🔥 UBAH: Fokus ke index maksimal 3
+        const nextIndex = Math.min(pastedData.length, 3);
         (inputs[nextIndex] as HTMLInputElement)?.focus();
       }
     }
@@ -85,14 +86,12 @@ const OtpVerification = () => {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "example@email.com";
 
-  // 🔥 UBAH: State array hanya 4 item
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  // 🔥 UBAH: Hanya 4 ref
   const inputRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -131,7 +130,7 @@ const OtpVerification = () => {
   };
 
   const handleResend = async () => {
-    setIsLoading(true); // Tampilkan loading saat meminta ulang
+    setIsLoading(true);
     try {
       const res = await fetch("/api/otp/resend", {
         method: "POST",
@@ -142,15 +141,16 @@ const OtpVerification = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal mengirim ulang OTP");
 
-      // Jika berhasil, reset timer dan beri tahu user
       setTimeLeft(60);
       setCanResend(false);
-      setOtp(["", "", "", ""]); // Reset ke 4 kosong
+      setOtp(["", "", "", ""]);
 
-      alert("Kode OTP baru telah dikirim ke email Anda!");
+      // <-- GANTI ALERT DENGAN TOAST SUCCESS
+      toast.success("Kode OTP baru telah dikirim ke email Anda!");
       setTimeout(() => inputRefs[0].current?.focus(), 100);
     } catch (error: any) {
-      alert(error.message);
+      // <-- GANTI ALERT DENGAN TOAST ERROR
+      toast.error(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +162,6 @@ const OtpVerification = () => {
     e.preventDefault();
     const otpString = otp.join("");
 
-    // 🔥 UBAH: Validasi panjang string harus 4
     if (otpString.length !== 4) return;
 
     setIsLoading(true);
@@ -177,9 +176,12 @@ const OtpVerification = () => {
       if (!res.ok) throw new Error(data.error || "Verifikasi gagal");
 
       setIsSuccess(true);
+      // <-- TAMBAHKAN TOAST SUCCESS SAAT VERIFIKASI BERHASIL
+      toast.success("Email berhasil diverifikasi!");
       setTimeout(() => router.push("/login"), 2000);
     } catch (error: any) {
-      alert(error.message);
+      // <-- GANTI ALERT DENGAN TOAST ERROR
+      toast.error(error.message);
     } finally {
       setIsLoading(false);
     }
