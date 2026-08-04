@@ -157,8 +157,6 @@ const App = () => {
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
       {/* --- SIDEBAR ADMIN --- */}
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />

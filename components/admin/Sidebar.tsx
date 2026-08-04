@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // <-- TAMBAHKAN usePathname
 import {
   Home,
   Users,
@@ -15,30 +15,36 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+// Hapus activeTab & setActiveTab dari props, karena sekarang URL adalah sumber kebenaran (source of truth)
 interface SidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
 }
 
 export default function Sidebar({
-  activeTab,
-  setActiveTab,
   isSidebarOpen,
   setIsSidebarOpen,
 }: SidebarProps) {
   const router = useRouter();
+  const pathname = usePathname(); // <-- DETEKSI URL SAAT INI
 
-  // Menu disesuaikan persis dengan spesifikasi PRD Dashboard Admin
+  // Tambahkan properti 'path' untuk setiap menu agar bisa diarahkan via router
   const adminItems = [
-    { name: "Dashboard", icon: Home },
-    { name: "Moderasi Artikel", icon: CheckSquare },
-    { name: "Manajemen User", icon: Users },
-    { name: "Kategori & Tag", icon: Tags },
-    { name: "Moderasi Komentar", icon: MessageSquare },
-    { name: "Statistik Ringkas", icon: Activity },
-    { name: "Pengaturan Platform", icon: Settings },
+    { name: "Dashboard", icon: Home, path: "/admin/dashboard" },
+    {
+      name: "Moderasi Artikel",
+      icon: CheckSquare,
+      path: "/admin/moderasi-artikel",
+    },
+    { name: "Manajemen User", icon: Users, path: "/admin/manajemen-user" },
+    { name: "Kategori & Tag", icon: Tags, path: "/admin/kategori-tag" },
+    {
+      name: "Moderasi Komentar",
+      icon: MessageSquare,
+      path: "/admin/moderasi-komentar",
+    },
+    { name: "Statistik Ringkas", icon: Activity, path: "/admin/statistik" },
+    { name: "Pengaturan Platform", icon: Settings, path: "/admin/pengaturan" },
   ];
 
   // Fungsi Logout
@@ -56,14 +62,12 @@ export default function Sidebar({
       {/* 1. Sidebar Header & Logo */}
       <div className="h-20 flex items-center justify-center border-b border-[#C4C4C4]/50 px-4 transition-all duration-300">
         <div className="flex items-center gap-3">
-          {/* Logo selalu muncul, ukurannya konsisten */}
           <img
             src="/logomedpel.png"
             alt="MedPel Logo"
             className="w-10 h-10 object-contain flex-shrink-0 transition-all duration-300"
           />
 
-          {/* Teks hanya muncul saat sidebar terbuka */}
           <AnimatePresence>
             {isSidebarOpen && (
               <motion.div
@@ -83,47 +87,51 @@ export default function Sidebar({
 
       {/* 2. Sidebar Navigation */}
       <div className="flex-1 px-3 py-6 space-y-1.5 overflow-y-auto no-scrollbar">
-        {adminItems.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => setActiveTab(item.name)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
-              activeTab === item.name
-                ? "bg-[#233982]/10 text-[#233982]"
-                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]"
-            }`}
-          >
-            <item.icon
-              size={20}
-              className={`flex-shrink-0 transition-colors ${
-                activeTab === item.name
-                  ? "text-[#233982]"
-                  : "group-hover:text-[#1B1B1B]"
+        {adminItems.map((item) => {
+          // Cek apakah URL saat ini cocok dengan path menu
+          const isActive =
+            pathname === item.path || pathname.startsWith(item.path + "/");
+
+          return (
+            <button
+              key={item.name}
+              onClick={() => router.push(item.path)} // <-- ARAHKAN KE ROUTE YANG SESUAI
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
+                isActive
+                  ? "bg-[#233982]/10 text-[#233982]"
+                  : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]"
               }`}
-            />
-
-            <AnimatePresence>
-              {isSidebarOpen && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-sm font-bold whitespace-nowrap"
-                >
-                  {item.name}
-                </motion.span>
-              )}
-            </AnimatePresence>
-
-            {/* Active Indicator */}
-            {activeTab === item.name && (
-              <motion.div
-                layoutId="sidebar-active"
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-[#233982]"
+            >
+              <item.icon
+                size={20}
+                className={`flex-shrink-0 transition-colors ${
+                  isActive ? "text-[#233982]" : "group-hover:text-[#1B1B1B]"
+                }`}
               />
-            )}
-          </button>
-        ))}
+
+              <AnimatePresence>
+                {isSidebarOpen && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm font-bold whitespace-nowrap"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+
+              {/* Active Indicator */}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-[#233982]"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* 3. Sidebar Footer & Logout */}
@@ -131,7 +139,6 @@ export default function Sidebar({
         <button
           onClick={handleLogout}
           className={`w-full flex items-center transition-all duration-300 rounded-xl text-red-500 hover:bg-red-50 group ${
-            // KUNCI: Saat tertutup, justify-center & px-0 agar icon benar-benar di tengah
             !isSidebarOpen
               ? "justify-center px-0 py-3"
               : "justify-start px-4 py-3 gap-4"
