@@ -283,9 +283,9 @@ export default function ModerasiArtikelPage() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-[#233982]/10 text-[#233982] rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0">
+                            {/* <div className="w-10 h-10 bg-[#233982]/10 text-[#233982] rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0">
                               {article.author.charAt(0)}
-                            </div>
+                            </div> */}
                             <div>
                               <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1 group-hover:text-[#233982] transition-colors">
                                 {article.title}

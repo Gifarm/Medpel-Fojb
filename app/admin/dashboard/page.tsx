@@ -435,11 +435,6 @@ const App = () => {
                       className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-transparent hover:border-[#233982]/20 hover:bg-white hover:shadow-sm transition-all group"
                     >
                       <div className="flex items-center gap-4">
-                        <div
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm ${art.priority === "High" ? "bg-red-50 text-red-600" : "bg-[#233982]/10 text-[#233982]"}`}
-                        >
-                          {art.title.charAt(0)}
-                        </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-bold text-sm text-[#1B1B1B] line-clamp-1">

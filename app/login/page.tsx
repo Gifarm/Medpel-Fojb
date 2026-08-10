@@ -108,7 +108,7 @@ const App = () => {
 
       // Redirect ke dashboard setelah 1 detik agar toast sempat terlihat
       setTimeout(() => {
-        router.push("/dashboard"); // Bisa diganti ke "/" jika ingin ke beranda
+        router.push("/"); // Bisa diganti ke "/" jika ingin ke beranda
       }, 1000);
     } catch (error: any) {
       toast.error(error.message);

@@ -1,74 +1,197 @@
+/* eslint-disable react-hooks/static-components */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Bell,
-  Search,
-  FilePlus,
   FileText,
-  Eye,
-  Edit3,
-  Trash2,
-  Globe,
-  CheckCircle2,
   Clock,
+  CheckCircle2,
+  Eye,
+  Plus,
+  Edit3,
+  AlertCircle,
+  MessageSquare,
+  TrendingUp,
+  MoreHorizontal,
 } from "lucide-react";
-
-// Pastikan path import ini disesuaikan dengan lokasi Anda menyimpan file SidebarJurnalis
-import SidebarJurnalis from "@/components/jurnalis/Sidebar";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import SidebarJurnalis from "@/components/jurnalis/Sidebar"; // Sesuaikan path
 
 const COLORS = {
   primary: "#FCC200",
-  primarySoft: "#FDCE33",
-  primaryLight: "#FDD85C",
   blueDark: "#233982",
   blue: "#4F619B",
-  blueLight: "#7281AF",
   black: "#1B1B1B",
   gray: "#C4C4C4",
-  white: "#FFFFFF",
-  bg: "#f8faf9",
 };
 
-const JurnalisPage = () => {
-  const [activeTab, setActiveTab] = useState("Dashboard");
+// --- Mock Data ---
+const statsData = [
+  {
+    label: "Total Artikel",
+    val: "24",
+    icon: FileText,
+    color: "text-[#233982]",
+    bg: "bg-[#233982]/10",
+  },
+  {
+    label: "Menunggu Review",
+    val: "3",
+    icon: Clock,
+    color: "text-yellow-600",
+    bg: "bg-yellow-50",
+  },
+  {
+    label: "Diterbitkan",
+    val: "18",
+    icon: CheckCircle2,
+    color: "text-green-600",
+    bg: "bg-green-50",
+  },
+  {
+    label: "Total Views",
+    val: "14,250",
+    icon: Eye,
+    color: "text-[#4F619B]",
+    bg: "bg-[#4F619B]/10",
+  },
+];
+
+const recentArticles = [
+  {
+    id: 1,
+    title: "Dampak AI dalam Pendidikan Modern di Indonesia",
+    category: "Teknologi",
+    status: "Published",
+    date: "25 Okt 2024",
+    views: 1250,
+  },
+  {
+    id: 2,
+    title: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
+    category: "Pendidikan",
+    status: "Review",
+    date: "27 Okt 2024",
+    views: 0,
+  },
+  {
+    id: 3,
+    title: "Eksplorasi Budaya: Festival Seni Pelajar",
+    category: "Budaya",
+    status: "Revision",
+    date: "28 Okt 2024",
+    views: 0,
+  },
+  {
+    id: 4,
+    title: "Pemanasan Global: Fakta vs Mitos",
+    category: "Sains",
+    status: "Draft",
+    date: "29 Okt 2024",
+    views: 0,
+  },
+];
+
+const notifications = [
+  {
+    id: 1,
+    type: "warning",
+    title: "Perlu Revisi",
+    message:
+      "Admin meminta penambahan sumber referensi pada artikel 'Eksplorasi Budaya'.",
+    date: "2 Jam lalu",
+    article: "Eksplorasi Budaya...",
+  },
+  {
+    id: 2,
+    type: "success",
+    title: "Artikel Diterbitkan",
+    message:
+      "Artikel 'Dampak AI dalam Pendidikan' telah tayang di halaman utama.",
+    date: "1 Hari lalu",
+    article: "Dampak AI...",
+  },
+  {
+    id: 3,
+    type: "info",
+    title: "Feedback Admin",
+    message:
+      "Judul artikel 'Pemanasan Global' sudah bagus, silakan lanjutkan ke tahap submit.",
+    date: "2 Hari lalu",
+    article: "Pemanasan Global...",
+  },
+];
+
+const chartData = [
+  { name: "Artikel 1", views: 1250 },
+  { name: "Artikel 2", views: 980 },
+  { name: "Artikel 3", views: 850 },
+  { name: "Artikel 4", views: 620 },
+  { name: "Artikel 5", views: 410 },
+];
+
+// --- Komponen Badge Status ---
+const StatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    Published: "bg-green-50 text-green-700 border-green-100",
+    Review: "bg-yellow-50 text-yellow-700 border-yellow-100",
+    Revision: "bg-red-50 text-red-700 border-red-100",
+    Draft: "bg-gray-100 text-gray-600 border-gray-200",
+  };
+  const labels: Record<string, string> = {
+    Published: "Diterbitkan",
+    Review: "Menunggu Review",
+    Revision: "Perlu Revisi",
+    Draft: "Draft",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${styles[status]}`}
+    >
+      {labels[status]}
+    </span>
+  );
+};
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 2,
+  }).format(value);
+
+export default function JurnalisDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Mock Data Jurnalis
-  const myArticles = [
-    {
-      id: 1,
-      title: "Dampak AI dalam Pendidikan Modern",
-      category: "Teknologi",
-      status: "Published",
-      views: 1240,
-      date: "12 Okt 2024",
-    },
-    {
-      id: 2,
-      title: "Eksplorasi Budaya di Sekolah Menengah",
-      category: "Budaya",
-      status: "Pending",
-      views: 0,
-      date: "14 Okt 2024",
-    },
-    {
-      id: 3,
-      title: "Pemanasan Global: Fakta vs Mitos",
-      category: "Sains",
-      status: "Draft",
-      views: 0,
-      date: "15 Okt 2024",
-    },
-  ];
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#1B1B1B] text-white text-xs p-3 rounded-xl shadow-xl border border-gray-700">
+          <p className="font-bold mb-1 text-white">{label}</p>
+          <p className="text-white font-semibold">
+            Views:{" "}
+            <span style={{ color: COLORS.primary }}>
+              {payload[0].value.toLocaleString()}
+            </span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
-      {/* --- SIDEBAR JURNALIS (DIPISAH) --- */}
+      {/* --- SIDEBAR --- */}
       <SidebarJurnalis
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
@@ -78,209 +201,262 @@ const JurnalisPage = () => {
         className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
       >
         {/* Top Header */}
-        <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-[#C4C4C4]/10 sticky top-0 z-40 px-8 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[#FCC200]/10 rounded-lg">
-              <Globe size={14} className="text-[#233982]" />
-              <span className="text-[10px] font-bold text-[#233982]">
-                JURNALIS_PORTAL
-              </span>
-            </div> */}
-            <div className="h-4 w-[1px] bg-[#C4C4C4]/20" />
-            <div>
-              <h2 className="text-lg font-bold text-[#1B1B1B]">{activeTab}</h2>
-              <p className="text-[10px] text-[#C4C4C4] font-bold uppercase tracking-widest">
-                Ruang Kerja Jurnalis
-              </p>
-            </div>
+        <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-[#1B1B1B]">
+              Dashboard Jurnalis
+            </h2>
+            <p className="text-[11px] text-[#C4C4C4] font-semibold uppercase tracking-wider">
+              Kelola karya dan pantau performa artikel Anda
+            </p>
           </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative group hidden md:block">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C4C4C4] group-focus-within:text-[#233982] transition-colors"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Cari artikel Anda..."
-                className="bg-[#C4C4C4]/10 border-none rounded-xl py-2.5 pl-10 pr-4 text-xs w-64 focus:ring-2 focus:ring-[#FCC200]/30 transition-all outline-none text-[#1B1B1B] placeholder-[#C4C4C4]"
-              />
-            </div>
-            <button className="p-2.5 text-[#C4C4C4] hover:bg-[#C4C4C4]/10 rounded-xl transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#FCC200] rounded-full border-2 border-[#FFFFFF]" />
-            </button>
-          </div>
+          <button className="px-5 py-2.5 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20">
+            <Plus size={16} />
+            Tulis Artikel Baru
+          </button>
         </header>
 
-        <div className="p-8 max-w-[1600px] mx-auto">
-          {/* DASHBOARD OVERVIEW */}
-          {activeTab === "Dashboard" && (
+        <div className="p-8 max-w-[1600px] mx-auto space-y-8">
+          {/* 1. Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statsData.map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-[#FFFFFF] p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all"
+              >
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bg} ${stat.color}`}
+                >
+                  <stat.icon size={22} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-[#C4C4C4] uppercase tracking-wide">
+                    {stat.label}
+                  </p>
+                  <h3 className="text-2xl font-bold text-[#1B1B1B]">
+                    {stat.val}
+                  </h3>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* 2. Main Content Split: Recent Articles & Notifications */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Recent Articles (2/3 width) */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="lg:col-span-2 bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6"
             >
-              {/* Hero Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  {
-                    label: "Total Artikel",
-                    val: "24",
-                    sub: "Sepanjang masa",
-                    icon: FileText,
-                    color: "blue",
-                  },
-                  {
-                    label: "Menunggu Review",
-                    val: "2",
-                    sub: "Butuh verifikasi",
-                    icon: Clock,
-                    color: "primary",
-                  },
-                  {
-                    label: "Total Views",
-                    val: "14.2K",
-                    sub: "↑ 8% bulan ini",
-                    icon: Eye,
-                    color: "blue",
-                  },
-                  {
-                    label: "Diterbitkan",
-                    val: "21",
-                    sub: "Artikel aktif",
-                    icon: CheckCircle2,
-                    color: "blue",
-                  },
-                ].map((s, i) => (
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="font-bold text-lg text-[#1B1B1B]">
+                    Artikel Terbaru Saya
+                  </h3>
+                  <p className="text-xs text-[#C4C4C4]">
+                    Pantau status dan performa tulisan Anda
+                  </p>
+                </div>
+                <button className="text-xs font-bold text-[#233982] hover:underline">
+                  Lihat Semua
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50/80 text-[11px] uppercase font-bold text-[#C4C4C4] tracking-wider border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3">Judul Artikel</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Views</th>
+                      <th className="px-4 py-3 text-right">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {recentArticles.map((article) => (
+                      <tr
+                        key={article.id}
+                        className="group hover:bg-[#FCC200]/[0.03] transition-colors"
+                      >
+                        <td className="px-4 py-4">
+                          <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1 group-hover:text-[#233982] transition-colors">
+                            {article.title}
+                          </p>
+                          <p className="text-[11px] text-[#C4C4C4] mt-0.5">
+                            {article.category} • {article.date}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <StatusBadge status={article.status} />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1B1B1B]">
+                            <Eye size={14} className="text-[#4F619B]" />
+                            {article.views > 0
+                              ? formatNumber(article.views)
+                              : "-"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              className="p-2 text-[#4F619B] hover:bg-[#4F619B]/10 rounded-lg transition-all"
+                              title="Edit"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              className="p-2 text-[#233982] hover:bg-[#233982]/10 rounded-lg transition-all"
+                              title="Preview"
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+
+            {/* Right: Notifications & Feedback (1/3 width) */}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-lg text-[#1B1B1B]">
+                  Notifikasi & Feedback
+                </h3>
+                <MessageSquare size={18} className="text-[#4F619B]" />
+              </div>
+
+              <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                {notifications.map((notif) => (
                   <div
-                    key={i}
-                    className="bg-[#FFFFFF] p-6 rounded-[2rem] border border-[#C4C4C4]/10 shadow-sm hover:shadow-xl transition-all group"
+                    key={notif.id}
+                    className={`p-4 rounded-xl border transition-all hover:shadow-md ${
+                      notif.type === "warning"
+                        ? "bg-red-50/50 border-red-100"
+                        : notif.type === "success"
+                          ? "bg-green-50/50 border-green-100"
+                          : "bg-blue-50/30 border-blue-100"
+                    }`}
                   >
-                    <div
-                      className={`w-12 h-12 rounded-2xl mb-4 flex items-center justify-center ${s.color === "primary" ? "bg-[#FCC200]/20 text-[#FCC200]" : "bg-[#233982]/10 text-[#233982]"} group-hover:scale-110 transition-transform`}
-                    >
-                      <s.icon size={24} />
-                    </div>
-                    <p className="text-[10px] font-black text-[#C4C4C4] uppercase tracking-widest">
-                      {s.label}
-                    </p>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <h3 className="text-3xl font-black text-[#1B1B1B]">
-                        {s.val}
-                      </h3>
-                      <span className="text-[10px] font-bold text-[#C4C4C4]">
-                        {s.sub}
-                      </span>
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-0.5 flex-shrink-0 ${
+                          notif.type === "warning"
+                            ? "text-red-500"
+                            : notif.type === "success"
+                              ? "text-green-500"
+                              : "text-blue-500"
+                        }`}
+                      >
+                        {notif.type === "warning" ? (
+                          <AlertCircle size={18} />
+                        ) : notif.type === "success" ? (
+                          <CheckCircle2 size={18} />
+                        ) : (
+                          <MessageSquare size={18} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p
+                            className={`text-xs font-bold uppercase tracking-wide ${
+                              notif.type === "warning"
+                                ? "text-red-600"
+                                : notif.type === "success"
+                                  ? "text-green-600"
+                                  : "text-blue-600"
+                            }`}
+                          >
+                            {notif.title}
+                          </p>
+                          <span className="text-[10px] text-[#C4C4C4] whitespace-nowrap">
+                            {notif.date}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#1B1B1B]/80 leading-relaxed mb-2">
+                          {notif.message}
+                        </p>
+                        <p className="text-[10px] font-semibold text-[#4F619B] bg-[#4F619B]/10 inline-block px-2 py-0.5 rounded">
+                          {notif.article}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-
-              {/* Recent Articles List */}
-              <div className="bg-[#FFFFFF] rounded-[2.5rem] border border-[#C4C4C4]/10 shadow-sm p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h3 className="font-bold text-lg text-[#1B1B1B]">
-                      Artikel Terbaru Anda
-                    </h3>
-                    <p className="text-xs text-[#C4C4C4]">
-                      Pantau status dan performa tulisan Anda.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("Tulis Artikel")}
-                    className="text-xs font-bold text-[#FFFFFF] bg-[#233982] px-4 py-2.5 rounded-xl hover:bg-[#233982]/90 transition-all flex items-center gap-2 shadow-lg shadow-[#233982]/20"
-                  >
-                    <FilePlus size={16} /> Tulis Baru
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {myArticles.map((art) => (
-                    <div
-                      key={art.id}
-                      className="flex items-center justify-between p-5 bg-[#C4C4C4]/10 rounded-[2rem] hover:bg-[#FFFFFF] border border-transparent hover:border-[#4F619B]/20 hover:shadow-md transition-all group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm font-bold bg-[#233982]/10 text-[#233982]">
-                          {art.title.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-[#1B1B1B]">
-                              {art.title}
-                            </h4>
-                            <span
-                              className={`px-2 py-0.5 text-[8px] font-black rounded uppercase ${
-                                art.status === "Published"
-                                  ? "bg-green-100 text-green-600"
-                                  : art.status === "Pending"
-                                    ? "bg-[#FCC200]/20 text-[#FCC200]"
-                                    : "bg-[#C4C4C4]/20 text-[#C4C4C4]"
-                              }`}
-                            >
-                              {art.status}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[10px] text-[#4F619B] font-bold uppercase">
-                              {art.category}
-                            </span>
-                            <div className="w-1 h-1 bg-[#C4C4C4] rounded-full" />
-                            <span className="text-[10px] text-[#C4C4C4]">
-                              {art.date}
-                            </span>
-                            {art.status === "Published" && (
-                              <>
-                                <div className="w-1 h-1 bg-[#C4C4C4] rounded-full" />
-                                <span className="text-[10px] text-[#1B1B1B] font-bold">
-                                  {art.views} Views
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                        <button className="p-2.5 bg-[#FFFFFF] text-[#4F619B] border border-[#C4C4C4]/20 rounded-xl hover:bg-[#4F619B] hover:text-[#FFFFFF] transition-all shadow-sm">
-                          <Edit3 size={18} />
-                        </button>
-                        <button className="p-2.5 bg-[#FFFFFF] text-red-500 border border-[#C4C4C4]/20 rounded-xl hover:bg-red-500 hover:text-[#FFFFFF] transition-all shadow-sm">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </motion.div>
-          )}
+          </div>
 
-          {/* PLACEHOLDER FOR OTHER TABS */}
-          {activeTab !== "Dashboard" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex flex-col items-center justify-center py-32 bg-[#FFFFFF] rounded-[3rem] border-2 border-dashed border-[#C4C4C4]/20"
-            >
-              <div className="w-20 h-20 bg-[#FCC200]/10 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                <FilePlus size={40} className="text-[#FCC200]" />
+          {/* 3. Performance Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="font-bold text-lg text-[#1B1B1B]">
+                  Performa Artikel Terpopuler
+                </h3>
+                <p className="text-xs text-[#C4C4C4]">
+                  Total views pada 5 artikel terbaik Anda bulan ini
+                </p>
               </div>
-              <h3 className="font-bold text-[#1B1B1B] text-xl mb-2">
-                Modul {activeTab}
-              </h3>
-              <p className="text-[#C4C4C4] text-sm max-w-sm text-center">
-                Fitur ini siap diintegrasikan. Struktur warna dan layout sudah
-                sesuai panduan.
-              </p>
-            </motion.div>
-          )}
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#4F619B] bg-[#4F619B]/10 px-3 py-1.5 rounded-lg">
+                <TrendingUp size={14} />
+                <span>+12% dari bulan lalu</span>
+              </div>
+            </div>
+            <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#f0f0f0"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#6B7280", fontSize: 11 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#6B7280", fontSize: 11 }}
+                  />
+                  <Tooltip
+                    content={<CustomTooltip />}
+                    cursor={{ fill: "rgba(0,0,0,0.02)" }}
+                  />
+                  <Bar
+                    dataKey="views"
+                    fill={COLORS.blueDark}
+                    radius={[6, 6, 0, 0]}
+                    barSize={40}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
         </div>
       </main>
     </div>
   );
-};
-
-export default JurnalisPage;
+}

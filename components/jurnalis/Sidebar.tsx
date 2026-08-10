@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Home,
   FilePlus,
@@ -13,28 +13,26 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+// Hapus activeTab & setActiveTab dari props, karena URL adalah sumber kebenaran (source of truth)
 interface SidebarJurnalisProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
 }
 
 export default function SidebarJurnalis({
-  activeTab,
-  setActiveTab,
   isSidebarOpen,
   setIsSidebarOpen,
 }: SidebarJurnalisProps) {
   const router = useRouter();
+  const pathname = usePathname(); // <-- DETEKSI URL SAAT INI
 
-  // Menu disesuaikan persis dengan spesifikasi PRD Dashboard Jurnalis
+  // Menu disesuaikan persis dengan spesifikasi PRD Dashboard Jurnalis + path routing
   const jurnalisItems = [
-    { name: "Dashboard", icon: Home },
-    { name: "Tulis Artikel", icon: FilePlus },
-    { name: "Artikel Saya", icon: FileText },
-    { name: "Notifikasi", icon: Bell },
-    { name: "Pengaturan Akun", icon: Settings },
+    { name: "Dashboard", icon: Home, path: "/jurnalis/dashboard" },
+    { name: "Tulis Artikel", icon: FilePlus, path: "/jurnalis/tulis-artikel" },
+    { name: "Artikel Saya", icon: FileText, path: "/jurnalis/artikel-saya" },
+    { name: "Notifikasi", icon: Bell, path: "/jurnalis/notifikasi" },
+    { name: "Pengaturan Akun", icon: Settings, path: "/jurnalis/pengaturan" },
   ];
 
   // Fungsi Logout
@@ -60,90 +58,65 @@ export default function SidebarJurnalis({
           />
 
           {/* Teks hanya muncul saat sidebar terbuka */}
-          <AnimatePresence>
-            {isSidebarOpen && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                <h1 className="font-black text-lg text-[#233982] leading-tight">
-                  Media <span className="text-[#FCC200]">Pelajar</span>
-                </h1>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isSidebarOpen && (
+            <h1 className="font-black text-lg text-[#233982] leading-tight">
+              Media <span className="text-[#233982]">Pelajar</span>
+            </h1>
+          )}
         </div>
       </div>
 
       {/* 2. Sidebar Navigation */}
       <div className="flex-1 px-3 py-6 space-y-1.5 overflow-y-auto no-scrollbar">
-        {jurnalisItems.map((item) => (
-          <button
-            key={item.name}
-            onClick={() => setActiveTab(item.name)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
-              activeTab === item.name
-                ? "bg-[#FCC200]/10 text-[#233982]"
-                : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]"
-            }`}
-          >
-            <item.icon
-              size={20}
-              className={`flex-shrink-0 transition-colors ${
-                activeTab === item.name
-                  ? "text-[#233982]"
-                  : "group-hover:text-[#1B1B1B]"
+        {jurnalisItems.map((item) => {
+          // Cek apakah URL saat ini cocok dengan path menu
+          const isActive =
+            pathname === item.path || pathname.startsWith(item.path + "/");
+
+          return (
+            <button
+              key={item.name}
+              onClick={() => router.push(item.path)} // <-- ARAHKAN KE ROUTE YANG SESUAI
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 group relative ${
+                isActive
+                  ? "bg-[#FCC200]/10 text-[#233982]"
+                  : "text-[#C4C4C4] hover:bg-[#C4C4C4]/10 hover:text-[#1B1B1B]"
               }`}
-            />
-
-            <AnimatePresence>
-              {isSidebarOpen && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-sm font-bold whitespace-nowrap"
-                >
-                  {item.name}
-                </motion.span>
-              )}
-            </AnimatePresence>
-
-            {/* Active Indicator (Aksen Khas Jurnalis: #FCC200) */}
-            {activeTab === item.name && (
-              <motion.div
-                layoutId="sidebar-jurnalis-active"
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-[#FCC200]"
+            >
+              <item.icon
+                size={20}
+                className={`flex-shrink-0 transition-colors ${
+                  isActive ? "text-[#233982]" : "group-hover:text-[#1B1B1B]"
+                }`}
               />
-            )}
-          </button>
-        ))}
+
+              <AnimatePresence>
+                {isSidebarOpen && (
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm font-bold whitespace-nowrap"
+                  >
+                    {item.name}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+
+              {/* Active Indicator (Aksen Khas Jurnalis: #FCC200) */}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-jurnalis-active"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-[#FCC200]"
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* 3. Sidebar Footer & Logout */}
       <div className="p-4 mt-auto border-t border-[#C4C4C4]/20">
-        {/* Optional: Mini Profile Info (akan hilang rapi saat collapsed) */}
-        {/* <AnimatePresence>
-          {isSidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-3 p-3 bg-[#FCC200]/10 rounded-xl overflow-hidden"
-            >
-              <p className="text-xs font-bold text-[#1B1B1B] truncate">
-                Jurnalis Aktif
-              </p>
-              <p className="text-[10px] text-[#233982] uppercase font-black flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Online
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence> */}
-
         <button
           onClick={handleLogout}
           className={`w-full flex items-center transition-all duration-300 rounded-xl text-red-500 hover:bg-red-50 group ${

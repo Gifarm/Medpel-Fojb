@@ -440,7 +440,7 @@ export default function Navbar() {
                     </button>
                     {user.role !== "MEMBER" && (
                       <button
-                        onClick={() => router.push("/dashboard")}
+                        onClick={() => router.push("/")}
                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                       >
                         <BarChart3 size={16} /> Dashboard
@@ -673,7 +673,7 @@ export default function Navbar() {
                     {user.role !== "MEMBER" && (
                       <button
                         onClick={() => {
-                          router.push("/dashboard");
+                          router.push("/");
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"

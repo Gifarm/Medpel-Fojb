@@ -44,7 +44,7 @@ export default function Sidebar({
       path: "/admin/moderasi-komentar",
     },
     { name: "Statistik Ringkas", icon: Activity, path: "/admin/statistik" },
-    { name: "Pengaturan Platform", icon: Settings, path: "/admin/pengaturan" },
+    { name: "Pengaturan", icon: Settings, path: "/admin/pengaturan" },
   ];
 
   // Fungsi Logout
@@ -68,20 +68,11 @@ export default function Sidebar({
             className="w-10 h-10 object-contain flex-shrink-0 transition-all duration-300"
           />
 
-          <AnimatePresence>
-            {isSidebarOpen && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                <h1 className="font-black text-lg text-[#233982] leading-tight">
-                  Media <span className="text-[#233982]">Pelajar</span>
-                </h1>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isSidebarOpen && (
+            <h1 className="font-black text-lg text-[#233982] leading-tight">
+              Media <span className="text-[#233982]">Pelajar</span>
+            </h1>
+          )}
         </div>
       </div>
 
