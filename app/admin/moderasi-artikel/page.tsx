@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
   Eye,
   CheckCircle2,
   XCircle,
@@ -14,10 +13,10 @@ import {
   FileText,
   ChevronDown,
   X,
-  AlertTriangle,
   Check,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
+import toast from "react-hot-toast";
 
 const COLORS = {
   primary: "#FCC200",
@@ -27,65 +26,6 @@ const COLORS = {
   gray: "#C4C4C4",
 };
 
-// --- Mock Data Artikel ---
-const mockArticles = [
-  {
-    id: 101,
-    title: "Dampak AI dalam Pendidikan Modern di Indonesia",
-    author: "Budi Santoso",
-    authorRole: "Jurnalis",
-    date: "2024-10-25",
-    category: "Teknologi",
-    status: "Pending",
-    excerpt:
-      "Kecerdasan buatan mulai merambah dunia pendidikan. Apakah ini ancaman atau peluang bagi pelajar...",
-  },
-  {
-    id: 102,
-    title: "Eksplorasi Budaya: Festival Seni Pelajar Jawa Barat",
-    author: "Siska Putri",
-    authorRole: "Jurnalis",
-    date: "2024-10-24",
-    category: "Budaya",
-    status: "Needs Revision",
-    excerpt:
-      "Festival seni tahunan kembali digelar dengan antusiasme tinggi. Namun, ada beberapa bagian yang perlu...",
-  },
-  {
-    id: 103,
-    title: "Pemanasan Global: Fakta vs Mitos di Kalangan Pelajar",
-    author: "Rian Hidayat",
-    authorRole: "Jurnalis",
-    date: "2024-10-23",
-    category: "Sains",
-    status: "Approved",
-    excerpt:
-      "Banyak informasi menyesatkan tentang perubahan iklim. Mari kita bedah fakta ilmiahnya...",
-  },
-  {
-    id: 104,
-    title: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
-    author: "Dewi Lestari",
-    authorRole: "Jurnalis",
-    date: "2024-10-22",
-    category: "Pendidikan",
-    status: "Rejected",
-    excerpt:
-      "Persiapan matang adalah kunci. Berikut adalah panduan lengkap dari para juara OSN...",
-  },
-  {
-    id: 105,
-    title: "Review Film: Perjuangan Pelajar di Daerah Terpencil",
-    author: "Andi Wijaya",
-    authorRole: "Editor",
-    date: "2024-10-21",
-    category: "Hiburan",
-    status: "Pending",
-    excerpt:
-      "Film ini mengangkat kisah nyata yang menginspirasi tentang semangat belajar tanpa batas...",
-  },
-];
-
 // --- Komponen Badge Status ---
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -93,6 +33,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     "Needs Revision": "bg-blue-50 text-blue-700 border-blue-100",
     Approved: "bg-green-50 text-green-700 border-green-100",
     Rejected: "bg-red-50 text-red-700 border-red-100",
+    Draft: "bg-gray-100 text-gray-600 border-gray-200",
   };
 
   const icons: Record<string, any> = {
@@ -100,16 +41,27 @@ const StatusBadge = ({ status }: { status: string }) => {
     "Needs Revision": Edit3,
     Approved: CheckCircle2,
     Rejected: XCircle,
+    Draft: FileText,
   };
 
   const Icon = icons[status] || Clock;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${styles[status] || styles.Pending}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+        styles[status] || styles.Pending
+      }`}
     >
       <Icon size={12} />
-      {status === "Needs Revision" ? "Perlu Revisi" : status}
+      {status === "Needs Revision"
+        ? "Perlu Revisi"
+        : status === "Pending"
+          ? "Menunggu"
+          : status === "Approved"
+            ? "Disetujui"
+            : status === "Rejected"
+              ? "Ditolak"
+              : status}
     </span>
   );
 };
@@ -119,50 +71,125 @@ export default function ModerasiArtikelPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [revisionNote, setRevisionNote] = useState("");
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  // Filter Data
-  const filteredArticles = useMemo(() => {
-    return mockArticles.filter((article) => {
-      const matchesSearch =
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.author.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus =
-        statusFilter === "All" || article.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+  // State untuk data real dari database
+  const [articles, setArticles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch Data Artikel dari API
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          search: searchQuery,
+          status: statusFilter,
+        });
+        const res = await fetch(`/api/admin/articles?${params.toString()}`);
+        const result = await res.json();
+        if (result.success) {
+          setArticles(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal memuat data artikel", error);
+        toast.error("Gagal memuat data artikel");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timer = setTimeout(fetchArticles, 300);
+    return () => clearTimeout(timer);
   }, [searchQuery, statusFilter]);
 
-  // Stats Data
+  // Stats Data (Otomatis update karena berbasis state 'articles')
   const stats = [
     {
       label: "Menunggu Review",
-      val: "28",
+      val: articles.filter((a) => a.status === "Pending").length.toString(),
       icon: Clock,
       color: "text-yellow-600",
       bg: "bg-yellow-50",
     },
     {
       label: "Perlu Revisi",
-      val: "12",
+      val: articles
+        .filter((a) => a.status === "Needs Revision")
+        .length.toString(),
       icon: Edit3,
       color: "text-blue-600",
       bg: "bg-blue-50",
     },
     {
-      label: "Disetujui Hari Ini",
-      val: "45",
+      label: "Disetujui",
+      val: articles.filter((a) => a.status === "Approved").length.toString(),
       icon: CheckCircle2,
       color: "text-green-600",
       bg: "bg-green-50",
     },
     {
-      label: "Ditolak Hari Ini",
-      val: "3",
+      label: "Ditolak",
+      val: articles.filter((a) => a.status === "Rejected").length.toString(),
       icon: XCircle,
       color: "text-red-600",
       bg: "bg-red-50",
     },
   ];
+
+  // --- OPTIMISTIC UI UPDATE: Langsung ubah status di frontend, lalu sync ke backend ---
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!selectedArticle) return;
+
+    setIsActionLoading(true);
+
+    // 1. Simpan state asli untuk rollback jika gagal
+    const originalArticles = [...articles];
+
+    // 2. LANGSUNG update state di frontend (Instant UI Change!)
+    const updatedArticles = articles.map((art) =>
+      art.id === selectedArticle.id ? { ...art, status: newStatus } : art,
+    );
+    setArticles(updatedArticles);
+
+    try {
+      const res = await fetch("/api/admin/articles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedArticle.id,
+          status: newStatus,
+          revisionNote:
+            newStatus === "Needs Revision" ? revisionNote : undefined,
+        }),
+      });
+
+      const result = await res.json();
+      if (!result.success) {
+        // 3. Rollback jika server menolak
+        setArticles(originalArticles);
+        toast.error(result.error || "Gagal memperbarui status");
+      } else {
+        // 4. Sukses: Tampilkan toast dan tutup modal
+        toast.success(
+          newStatus === "Approved"
+            ? "Artikel berhasil disetujui & dipublikasikan!"
+            : newStatus === "Rejected"
+              ? "Artikel berhasil ditolak."
+              : "Permintaan revisi berhasil dikirim ke jurnalis.",
+        );
+        setSelectedArticle(null);
+        setRevisionNote("");
+      }
+    } catch (error) {
+      // 5. Rollback jika error jaringan
+      setArticles(originalArticles);
+      toast.error("Terjadi kesalahan jaringan. Perubahan dibatalkan.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
@@ -174,7 +201,9 @@ export default function ModerasiArtikelPage() {
 
       {/* --- MAIN CONTENT --- */}
       <main
-        className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
+        className={`flex-1 transition-all duration-300 ${
+          isSidebarOpen ? "ml-[280px]" : "ml-[80px]"
+        }`}
       >
         {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
@@ -273,8 +302,14 @@ export default function ModerasiArtikelPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredArticles.length > 0 ? (
-                    filteredArticles.map((article) => (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#233982] mx-auto"></div>
+                      </td>
+                    </tr>
+                  ) : articles.length > 0 ? (
+                    articles.map((article) => (
                       <motion.tr
                         key={article.id}
                         initial={{ opacity: 0 }}
@@ -283,9 +318,6 @@ export default function ModerasiArtikelPage() {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-start gap-3">
-                            {/* <div className="w-10 h-10 bg-[#233982]/10 text-[#233982] rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0">
-                              {article.author.charAt(0)}
-                            </div> */}
                             <div>
                               <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1 group-hover:text-[#233982] transition-colors">
                                 {article.title}
@@ -311,6 +343,7 @@ export default function ModerasiArtikelPage() {
                           </p>
                         </td>
                         <td className="px-6 py-4">
+                          {/* Status badge akan langsung berubah warna tanpa refresh! */}
                           <StatusBadge status={article.status} />
                         </td>
                         <td className="px-6 py-4">
@@ -325,12 +358,27 @@ export default function ModerasiArtikelPage() {
                             {article.status === "Pending" && (
                               <>
                                 <button
+                                  onClick={() => {
+                                    setSelectedArticle(article);
+                                    // Delay sedikit agar modal terbuka dulu, baru status berubah
+                                    setTimeout(
+                                      () => handleUpdateStatus("Approved"),
+                                      100,
+                                    );
+                                  }}
                                   className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
                                   title="Setujui"
                                 >
                                   <Check size={18} />
                                 </button>
                                 <button
+                                  onClick={() => {
+                                    setSelectedArticle(article);
+                                    setTimeout(
+                                      () => handleUpdateStatus("Rejected"),
+                                      100,
+                                    );
+                                  }}
                                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                   title="Tolak"
                                 >
@@ -361,26 +409,11 @@ export default function ModerasiArtikelPage() {
               </table>
             </div>
 
-            {/* Pagination (Dummy) */}
+            {/* Pagination Info */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-[#C4C4C4]">
-                Menampilkan {filteredArticles.length} dari {mockArticles.length}{" "}
-                artikel
+                Menampilkan {articles.length} artikel
               </p>
-              <div className="flex items-center gap-2">
-                <button
-                  className="px-3 py-1.5 text-xs font-bold text-[#C4C4C4] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                  disabled
-                >
-                  Sebelumnya
-                </button>
-                <button className="px-3 py-1.5 text-xs font-bold text-[#233982] bg-[#233982]/10 border border-[#233982]/20 rounded-lg">
-                  1
-                </button>
-                <button className="px-3 py-1.5 text-xs font-bold text-[#C4C4C4] border border-gray-200 rounded-lg hover:bg-gray-50">
-                  Selanjutnya
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -394,7 +427,10 @@ export default function ModerasiArtikelPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedArticle(null)}
+            onClick={() => {
+              setSelectedArticle(null);
+              setRevisionNote("");
+            }}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -414,7 +450,10 @@ export default function ModerasiArtikelPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setSelectedArticle(null)}
+                  onClick={() => {
+                    setSelectedArticle(null);
+                    setRevisionNote("");
+                  }}
                   className="p-2 hover:bg-gray-200 rounded-full transition-colors text-[#C4C4C4] hover:text-[#1B1B1B]"
                 >
                   <X size={20} />
@@ -450,43 +489,95 @@ export default function ModerasiArtikelPage() {
                 </div>
 
                 <div className="prose prose-sm max-w-none text-[#1B1B1B]/80 leading-relaxed">
-                  <p className="font-semibold text-lg text-[#1B1B1B] mb-4">
-                    {selectedArticle.excerpt}
-                  </p>
-                  <p>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed
-                    do eiusmod tempor incididunt ut labore et dolore magna
-                    aliqua. Ut enim ad minim veniam, quis nostrud exercitation
-                    ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    Duis aute irure dolor in reprehenderit in voluptate velit
-                    esse cillum dolore eu fugiat nulla pariatur.
-                  </p>
-                  <p className="mt-4">
-                    Excepteur sint occaecat cupidatat non proident, sunt in
-                    culpa qui officia deserunt mollit anim id est laborum. Sed
-                    ut perspiciatis unde omnis iste natus error sit voluptatem
-                    accusantium doloremque laudantium.
-                  </p>
+                  {selectedArticle.excerpt && (
+                    <p className="font-semibold text-lg text-[#1B1B1B] mb-4 italic">
+                      {selectedArticle.excerpt}
+                    </p>
+                  )}
+                  <div className="whitespace-pre-wrap">
+                    {selectedArticle.content ||
+                      "Konten artikel belum tersedia."}
+                  </div>
                 </div>
+
+                {/* Input Catatan Revisi */}
+                {selectedArticle.showRevisionInput && (
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                    <label className="block text-xs font-bold text-blue-700 uppercase tracking-wide mb-2">
+                      Catatan Revisi untuk Jurnalis
+                    </label>
+                    <textarea
+                      value={revisionNote}
+                      onChange={(e) => setRevisionNote(e.target.value)}
+                      placeholder="Jelaskan bagian mana yang perlu diperbaiki..."
+                      rows={4}
+                      className="w-full bg-white border border-blue-200 rounded-lg py-2.5 px-4 text-sm text-[#1B1B1B] focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all resize-none"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Modal Footer (Actions) */}
               <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
                 <button
-                  onClick={() => setSelectedArticle(null)}
+                  onClick={() => {
+                    setSelectedArticle(null);
+                    setRevisionNote("");
+                  }}
                   className="px-5 py-2.5 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] transition-colors"
+                  disabled={isActionLoading}
                 >
                   Batal
                 </button>
-                <button className="px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all flex items-center gap-2">
-                  <XCircle size={16} /> Tolak
-                </button>
-                <button className="px-5 py-2.5 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2">
-                  <Edit3 size={16} /> Minta Revisi
-                </button>
-                <button className="px-5 py-2.5 text-sm font-bold text-white bg-[#233982] rounded-xl hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20 flex items-center gap-2">
-                  <CheckCircle2 size={16} /> Setujui & Publikasi
-                </button>
+                {!selectedArticle.showRevisionInput && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedArticle({
+                          ...selectedArticle,
+                          showRevisionInput: true,
+                        });
+                      }}
+                      className="px-5 py-2.5 text-sm font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2"
+                      disabled={isActionLoading}
+                    >
+                      <Edit3 size={16} /> Minta Revisi
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus("Rejected")}
+                      className="px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all flex items-center gap-2"
+                      disabled={isActionLoading}
+                    >
+                      <XCircle size={16} /> Tolak
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus("Approved")}
+                      className="px-5 py-2.5 text-sm font-bold text-white bg-[#233982] rounded-xl hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20 flex items-center gap-2"
+                      disabled={isActionLoading}
+                    >
+                      {isActionLoading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      Setujui & Publikasi
+                    </button>
+                  </>
+                )}
+                {selectedArticle.showRevisionInput && (
+                  <button
+                    onClick={() => handleUpdateStatus("Needs Revision")}
+                    disabled={!revisionNote.trim() || isActionLoading}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isActionLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Edit3 size={16} />
+                    )}
+                    Kirim Permintaan Revisi
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>

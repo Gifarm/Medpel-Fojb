@@ -100,15 +100,29 @@ const App = () => {
         throw new Error(data.error || "Login gagal");
       }
 
-      // Login berhasil: Tampilkan toast dan redirect otomatis
+      // Login berhasil: Tampilkan toast
       toast.success("Berhasil masuk! Mengalihkan...");
 
       // Simpan data user ke localStorage
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Redirect ke dashboard setelah 1 detik agar toast sempat terlihat
+      // <-- BARU: Logika Redirect Berdasarkan Role
+      const userRole = data.user.role;
+      let redirectPath = "/"; // Default fallback untuk MEMBER atau role tidak dikenal
+
+      if (userRole === "ADMIN") {
+        redirectPath = "/admin/dashboard"; // Ubah ke "/admin/dashboard" jika folder Anda bernama demikian
+      } else if (userRole === "JURNALIS") {
+        redirectPath = "/jurnalis/dashboard"; // Ubah ke "/jurnalis/dashboard" jika perlu
+      } else if (userRole === "KOL") {
+        redirectPath = "/kol/dashboard"; // Atau "/jurnalis" jika KOL menggunakan dashboard yang sama
+      } else if (userRole === "MEMBER") {
+        redirectPath = "/";
+      }
+
+      // Redirect setelah 1 detik agar toast sempat terlihat
       setTimeout(() => {
-        router.push("/"); // Bisa diganti ke "/" jika ingin ke beranda
+        router.push(redirectPath);
       }, 1000);
     } catch (error: any) {
       toast.error(error.message);

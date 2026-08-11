@@ -1,24 +1,23 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/static-components */
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 import {
   Bell,
   Search,
   FileText,
-  UserPlus,
-  Trash2,
-  Layers,
   Users,
   CheckSquare,
   Activity,
-  ShieldAlert,
   CheckCircle2,
   AlertCircle,
   TrendingUp,
   TrendingDown,
+  Eye,
 } from "lucide-react";
 import {
   LineChart,
@@ -47,95 +46,77 @@ const COLORS = {
   bg: "#f8faf9",
 };
 
-// --- Dummy Data untuk Charts ---
-const trafficData = [
-  { name: "Sen", visitors: 4200 },
-  { name: "Sel", visitors: 3800 },
-  { name: "Rab", visitors: 5100 },
-  { name: "Kam", visitors: 4900 },
-  { name: "Jum", visitors: 6800 },
-  { name: "Sab", visitors: 8400 },
-  { name: "Min", visitors: 7200 },
-];
-
-const articleStatusData = [
-  { name: "Published", value: 145, color: COLORS.blueDark },
-  { name: "Pending", value: 28, color: COLORS.primary },
-  { name: "Draft", value: 12, color: COLORS.gray },
-];
-
 const App = () => {
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock Data
-  const pendingArticles = [
-    {
-      id: 101,
-      title: "Dampak AI dalam Pendidikan Modern",
-      author: "Budi Santoso",
-      date: "Baru saja",
-      category: "Teknologi",
-      priority: "High",
-    },
-    {
-      id: 102,
-      title: "Eksplorasi Budaya di Sekolah Menengah",
-      author: "Siska Putri",
-      date: "2 jam lalu",
-      category: "Budaya",
-      priority: "Medium",
-    },
-    {
-      id: 103,
-      title: "Pemanasan Global: Fakta vs Mitos",
-      author: "Rian Hidayat",
-      date: "5 jam lalu",
-      category: "Sains",
-      priority: "Low",
-    },
-  ];
+  // State untuk filter dan data trafik real
+  const [trafficFilter, setTrafficFilter] = useState("7_days");
+  const [trafficData, setTrafficData] = useState<any[]>([]);
+  const [isTrafficLoading, setIsTrafficLoading] = useState(false);
 
-  const allUsers = [
-    {
-      id: 1,
-      name: "Budi Santoso",
-      role: "Jurnalis",
-      status: "Active",
-      posts: 12,
-      joined: "Jan 2024",
-      email: "budi@medpel.com",
-    },
-    {
-      id: 2,
-      name: "Siska Putri",
-      role: "Jurnalis",
-      status: "Pending",
-      posts: 0,
-      joined: "Okt 2024",
-      email: "siska@medpel.com",
-    },
-    {
-      id: 3,
-      name: "Andi Wijaya",
-      role: "Editor",
-      status: "Active",
-      posts: 45,
-      joined: "Mei 2023",
-      email: "andi@medpel.com",
-    },
-    {
-      id: 4,
-      name: "Rina Kartika",
-      role: "Jurnalis",
-      status: "Suspended",
-      posts: 8,
-      joined: "Feb 2023",
-      email: "rina@medpel.com",
-    },
-  ];
+  // 1. Fetch Data Dashboard Utama
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const res = await fetch("/api/admin/dashboard");
+        const result = await res.json();
+        if (result.success) {
+          setDashboardData(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal memuat data dashboard", error);
+        toast.error("Gagal memuat data dashboard");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Custom Tooltip untuk Recharts - DINAMIS (bisa untuk LineChart & PieChart)
+    fetchDashboardData();
+  }, []);
+
+  // 2. Fetch Data Trafik Berdasarkan Filter
+  useEffect(() => {
+    const fetchTrafficData = async () => {
+      setIsTrafficLoading(true);
+      try {
+        const res = await fetch(`/api/admin/traffic?period=${trafficFilter}`);
+        const result = await res.json();
+        if (result.success) {
+          setTrafficData(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal memuat data trafik", error);
+        toast.error("Gagal memuat data trafik");
+      } finally {
+        setIsTrafficLoading(false);
+      }
+    };
+
+    fetchTrafficData();
+  }, [trafficFilter]); // Re-fetch setiap kali filter berubah
+
+  if (isLoading || !dashboardData) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
+
+  const {
+    stats,
+    recentPendingArticles,
+    articleStatusData: apiArticleStatusData,
+  } = dashboardData;
+
+  const totalArticles = apiArticleStatusData.reduce(
+    (sum: number, item: any) => sum + item.value,
+    0,
+  );
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -155,17 +136,14 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
-      {/* --- SIDEBAR ADMIN --- */}
       <Sidebar
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
 
-      {/* --- MAIN CONTENT --- */}
       <main
         className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
       >
-        {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-40 px-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
@@ -188,57 +166,49 @@ const App = () => {
                 className="bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm w-64 focus:ring-2 focus:ring-[#233982]/20 focus:border-[#233982] transition-all outline-none text-[#1B1B1B] placeholder-[#C4C4C4]"
               />
             </div>
-            <button className="p-2.5 text-[#C4C4C4] hover:bg-gray-100 rounded-xl transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#FFFFFF]" />
-            </button>
-            <div className="w-9 h-9 rounded-xl bg-[#233982] flex items-center justify-center text-white cursor-pointer hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20">
-              <Layers size={18} />
-            </div>
           </div>
         </header>
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
-          {/* DASHBOARD OVERVIEW */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-8"
           >
-            {/* 1. Hero Stats (Refined) */}
+            {/* 1. Hero Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
                   label: "Total Jurnalis",
-                  val: "154",
-                  sub: "+12 bulan ini",
+                  val: stats.totalJurnalis.toString(),
+                  sub: "Terdaftar di sistem",
                   icon: Users,
                   trend: "up",
                   color: "blue",
                 },
                 {
                   label: "Pending Review",
-                  val: "28",
+                  val: stats.pendingReview.toString(),
                   sub: "Butuh tindakan",
                   icon: CheckSquare,
                   trend: "neutral",
                   color: "primary",
                 },
                 {
-                  label: "Visitor Hari Ini",
-                  val: "12,402",
-                  sub: "↑ 14% dari kemarin",
+                  label: "Artikel Terbit",
+                  val: stats.publishedArticles.toString(),
+                  sub: "Sudah dipublikasikan",
                   icon: Activity,
                   trend: "up",
                   color: "blue",
                 },
                 {
-                  label: "Security Alerts",
-                  val: "0",
-                  sub: "System Secure",
-                  icon: ShieldAlert,
-                  trend: "down",
-                  color: "green",
+                  label: "Total Views Hari Ini",
+                  val: (stats.visitorToday || 0).toString(),
+                  sub: "Pengunjung unik",
+                  icon: Eye,
+                  trend: "up",
+                  color: "blue",
                 },
               ].map((s, i) => (
                 <div
@@ -273,9 +243,9 @@ const App = () => {
               ))}
             </div>
 
-            {/* 2. Charts Section (FIXED - teks putih & visible) */}
+            {/* 2. Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Line Chart: Traffic */}
+              {/* Line Chart: Traffic (DINAMIS DARI API) */}
               <div className="lg:col-span-2 bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -283,63 +253,75 @@ const App = () => {
                       Trafik Pengunjung
                     </h3>
                     <p className="text-xs text-[#C4C4C4]">
-                      Statistik kunjungan 7 hari terakhir
+                      Statistik kunjungan berdasarkan periode
                     </p>
                   </div>
-                  <select className="text-xs font-semibold text-[#1B1B1B] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#233982]/20">
-                    <option>7 Hari Terakhir</option>
-                    <option>30 Hari Terakhir</option>
+                  <select
+                    value={trafficFilter}
+                    onChange={(e) => setTrafficFilter(e.target.value)}
+                    disabled={isTrafficLoading}
+                    className="text-xs font-semibold text-[#1B1B1B] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-[#233982]/20 cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="7_days">7 Hari Terakhir</option>
+                    <option value="this_month">Bulan Ini</option>
+                    <option value="this_year">Tahun Ini</option>
                   </select>
                 </div>
+
                 <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trafficData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#f0f0f0"
-                      />
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: "#6B7280",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                        dy={10}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{
-                          fill: "#6B7280",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Line
-                        type="monotone"
-                        dataKey="visitors"
-                        stroke={COLORS.blueDark}
-                        strokeWidth={3}
-                        dot={{
-                          fill: COLORS.blueDark,
-                          r: 4,
-                          strokeWidth: 2,
-                          stroke: "#fff",
-                        }}
-                        activeDot={{ r: 6, fill: COLORS.primary }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {isTrafficLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#233982]"></div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={trafficData}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#f0f0f0"
+                        />
+                        <XAxis
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: "#6B7280",
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                          dy={10}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: "#6B7280",
+                            fontSize: 12,
+                            fontWeight: 600,
+                          }}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Line
+                          type="monotone"
+                          dataKey="visitors"
+                          stroke={COLORS.blueDark}
+                          strokeWidth={3}
+                          dot={{
+                            fill: COLORS.blueDark,
+                            r: 4,
+                            strokeWidth: 2,
+                            stroke: "#fff",
+                          }}
+                          activeDot={{ r: 6, fill: COLORS.primary }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
-              {/* Donut Chart: Article Status (FIXED - teks putih) */}
-              {/* Donut Chart: Article Status (IMPROVED) */}
+              {/* Donut Chart: Article Status */}
               <div className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col">
                 <h3 className="font-bold text-lg text-[#1B1B1B] mb-1">
                   Status Artikel
@@ -351,7 +333,7 @@ const App = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={articleStatusData}
+                        data={apiArticleStatusData}
                         cx="50%"
                         cy="50%"
                         innerRadius={70}
@@ -359,26 +341,27 @@ const App = () => {
                         paddingAngle={5}
                         dataKey="value"
                       >
-                        {articleStatusData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={entry.color}
-                            stroke="none"
-                          />
-                        ))}
+                        {apiArticleStatusData.map(
+                          (entry: any, index: number) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={entry.color}
+                              stroke="none"
+                            />
+                          ),
+                        )}
                       </Pie>
-                      {/* Tooltip dengan posisi di atas chart */}
                       <Tooltip
                         content={<CustomTooltip />}
-                        position={{ x: 150, y: 20 }} // Posisi tooltip di atas
+                        position={{ x: 150, y: 20 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  {/* Center Text */}
+
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <div className="bg-white rounded-full w-24 h-24 flex flex-col items-center justify-center shadow-lg border-2 border-gray-50">
                       <span className="text-2xl font-bold text-[#233982]">
-                        185
+                        {totalArticles}
                       </span>
                       <span className="text-[9px] font-bold text-[#C4C4C4] uppercase tracking-wider">
                         Total
@@ -387,7 +370,7 @@ const App = () => {
                   </div>
                 </div>
                 <div className="mt-4 space-y-3">
-                  {articleStatusData.map((item, idx) => (
+                  {apiArticleStatusData.map((item: any, idx: number) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between text-sm"
@@ -410,9 +393,8 @@ const App = () => {
               </div>
             </div>
 
-            {/* 3. Moderation Queue & Activity */}
+            {/* 3. Moderation Queue & Activity (Tetap sama seperti sebelumnya) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Moderation Queue */}
               <div className="lg:col-span-2 bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -429,64 +411,74 @@ const App = () => {
                 </div>
 
                 <div className="space-y-3">
-                  {pendingArticles.map((art) => (
-                    <div
-                      key={art.id}
-                      className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-transparent hover:border-[#233982]/20 hover:bg-white hover:shadow-sm transition-all group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-[#1B1B1B] line-clamp-1">
-                              {art.title}
-                            </h4>
-                            {art.priority === "High" && (
-                              <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-md uppercase tracking-wide">
-                                Urgent
-                              </span>
-                            )}
+                  {recentPendingArticles.length > 0 ? (
+                    recentPendingArticles.map((art: any) => (
+                      <div
+                        key={art.id}
+                        className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-transparent hover:border-[#233982]/20 hover:bg-white hover:shadow-sm transition-all group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm ${art.priority === "High" ? "bg-red-50 text-red-600" : "bg-[#233982]/10 text-[#233982]"}`}
+                          >
+                            {art.title.charAt(0)}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] text-[#C4C4C4] font-semibold">
-                              {art.author}
-                            </span>
-                            <span className="text-[#C4C4C4]">•</span>
-                            <span className="text-[10px] text-[#4F619B] font-semibold">
-                              {art.category}
-                            </span>
-                            <span className="text-[#C4C4C4]">•</span>
-                            <span className="text-[10px] text-[#C4C4C4]">
-                              {art.date}
-                            </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-sm text-[#1B1B1B] line-clamp-1">
+                                {art.title}
+                              </h4>
+                              {art.priority === "High" && (
+                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[9px] font-black rounded-md uppercase tracking-wide">
+                                  Urgent
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-[#C4C4C4] font-semibold">
+                                {art.author}
+                              </span>
+                              <span className="text-[#C4C4C4]">•</span>
+                              <span className="text-[10px] text-[#4F619B] font-semibold">
+                                {art.category}
+                              </span>
+                              <span className="text-[#C4C4C4]">•</span>
+                              <span className="text-[10px] text-[#C4C4C4]">
+                                {art.date}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <button
+                            className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-500 hover:text-white transition-all"
+                            title="Approve"
+                          >
+                            <CheckCircle2 size={16} />
+                          </button>
+                          <button
+                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                            title="Reject"
+                          >
+                            <AlertCircle size={16} />
+                          </button>
+                          <button
+                            className="p-2 bg-white text-[#1B1B1B] border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                            title="Preview"
+                          >
+                            <FileText size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                        <button
-                          className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-500 hover:text-white transition-all"
-                          title="Approve"
-                        >
-                          <CheckCircle2 size={16} />
-                        </button>
-                        <button
-                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                          title="Reject"
-                        >
-                          <AlertCircle size={16} />
-                        </button>
-                        <button
-                          className="p-2 bg-white text-[#1B1B1B] border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
-                          title="Preview"
-                        >
-                          <FileText size={16} />
-                        </button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-[#C4C4C4] text-sm">
+                      Tidak ada artikel yang menunggu review. Kerja bagus! 🎉
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 
-              {/* System Logs */}
               <div className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm p-6">
                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-[#1B1B1B]">
                   <Activity size={18} className="text-[#4F619B]" /> Log
