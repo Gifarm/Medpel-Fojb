@@ -47,9 +47,18 @@ export default function Sidebar({
     { name: "Pengaturan", icon: Settings, path: "/admin/pengaturan" },
   ];
 
-  // Fungsi Logout
+  // Fungsi Logout (Ganti yang lama dengan ini)
   const handleLogout = () => {
+    // 1. Hapus data dari localStorage
     localStorage.removeItem("user");
+
+    // 2. Hapus cookie agar middleware tahu user sudah logout
+    document.cookie =
+      "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie =
+      "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+    // 3. Redirect ke halaman login
     router.push("/login");
   };
 

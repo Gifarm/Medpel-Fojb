@@ -91,12 +91,18 @@ export default function Navbar() {
     }
   }, [isMobileMenuOpen]);
 
-  // <-- BARU: Fungsi Logout
   const handleLogout = () => {
+    // 1. Hapus data dari localStorage
     localStorage.removeItem("user");
-    setUser(null);
-    router.push("/");
-    setIsMobileMenuOpen(false);
+
+    // 2. Hapus cookie agar middleware tahu user sudah logout
+    document.cookie =
+      "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie =
+      "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+    // 3. Redirect ke halaman login
+    router.push("/login");
   };
 
   // --- ROUTING MAPPING ---

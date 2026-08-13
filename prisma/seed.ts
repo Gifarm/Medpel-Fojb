@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import "dotenv/config";
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
@@ -113,11 +114,10 @@ async function main() {
   console.log("✅ Data Kategori dan Tag berhasil dimasukkan!");
 
   // ==========================================
-  // 3. SEED ARTIKEL (Penting untuk Dashboard)
+  // 3. SEED ARTIKEL (Dengan Relasi Tags menggunakan Upsert)
   // ==========================================
-  console.log("\n📝 3. Membuat data Artikel dummy...");
+  console.log("\n📝 3. Membuat data Artikel dummy beserta Tags...");
 
-  // Ambil ID user jurnalis dan kategori untuk relasi database
   const jurnalisUser = await prisma.user.findFirst({
     where: { role: "JURNALIS" },
   });
@@ -137,74 +137,93 @@ async function main() {
     kategoriTeknologi &&
     kategoriPrestasi
   ) {
-    await prisma.article.createMany({
-      data: [
-        // --- Artikel PUBLISHED (Untuk Statistik & Chart) ---
-        {
-          title: "Dampak AI dalam Pendidikan Modern di Indonesia",
-          slug: "dampak-ai-dalam-pendidikan-modern",
-          excerpt:
-            "Kecerdasan buatan mulai merambah dunia pendidikan. Apakah ini ancaman atau peluang...",
-          content: "Isi artikel lengkap tentang dampak AI dalam pendidikan...",
-          status: "PUBLISHED",
-          views: 1250,
-          authorId: jurnalisUser.id,
-          categoryId: kategoriPendidikan.id,
-        },
-        {
-          title: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
-          slug: "tips-sukses-menghadapi-osn",
-          excerpt:
-            "Persiapan matang adalah kunci. Berikut adalah panduan lengkap dari para juara OSN...",
-          content:
-            "Isi artikel lengkap tentang tips dan trik menghadapi OSN...",
-          status: "PUBLISHED",
-          views: 3800,
-          authorId: jurnalisUser.id,
-          categoryId: kategoriPrestasi.id,
-        },
+    const articlesData = [
+      {
+        slug: "dampak-ai-dalam-pendidikan-modern",
+        title: "Dampak AI dalam Pendidikan Modern di Indonesia",
+        excerpt:
+          "Kecerdasan buatan mulai merambah dunia pendidikan. Apakah ini ancaman atau peluang...",
+        content: "Isi artikel lengkap tentang dampak AI dalam pendidikan...",
+        status: "PUBLISHED",
+        views: 1250,
+        categoryId: kategoriPendidikan.id,
+        tagSlugs: ["coding"],
+      },
+      {
+        slug: "tips-sukses-menghadapi-osn",
+        title: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
+        excerpt:
+          "Persiapan matang adalah kunci. Berikut adalah panduan lengkap dari para juara OSN...",
+        content: "Isi artikel lengkap tentang tips dan trik menghadapi OSN...",
+        status: "PUBLISHED",
+        views: 3800,
+        categoryId: kategoriPrestasi.id,
+        tagSlugs: ["osn", "lomba"],
+      },
+      {
+        slug: "eksplorasi-budaya-festival-seni-pelajar",
+        title: "Eksplorasi Budaya: Festival Seni Pelajar Jawa Barat",
+        excerpt:
+          "Festival seni tahunan kembali digelar dengan antusiasme tinggi dari berbagai sekolah...",
+        content: "Isi artikel lengkap tentang festival seni pelajar...",
+        status: "PENDING_REVIEW",
+        views: 0,
+        categoryId: kategoriPendidikan.id,
+        tagSlugs: ["lomba"],
+      },
+      {
+        slug: "pemanasan-global-fakta-vs-mitos",
+        title: "Pemanasan Global: Fakta vs Mitos di Kalangan Pelajar",
+        excerpt:
+          "Banyak informasi menyesatkan tentang perubahan iklim. Mari kita bedah fakta ilmiahnya...",
+        content:
+          "Isi artikel lengkap tentang fakta dan mitos pemanasan global...",
+        status: "PENDING_REVIEW",
+        views: 0,
+        categoryId: kategoriTeknologi.id,
+        tagSlugs: ["beasiswa"],
+      },
+      {
+        slug: "review-film-perjuangan-pelajar",
+        title: "Review Film: Perjuangan Pelajar di Daerah Terpencil",
+        excerpt:
+          "Film ini mengangkat kisah nyata yang menginspirasi tentang semangat belajar...",
+        content: "Isi artikel lengkap tentang review film...",
+        status: "DRAFT",
+        views: 0,
+        categoryId: kategoriPendidikan.id,
+        tagSlugs: ["osn"],
+      },
+    ];
 
-        // --- Artikel PENDING_REVIEW (Untuk Antrean Moderasi di Dashboard Admin) ---
-        {
-          title: "Eksplorasi Budaya: Festival Seni Pelajar Jawa Barat",
-          slug: "eksplorasi-budaya-festival-seni-pelajar",
-          excerpt:
-            "Festival seni tahunan kembali digelar dengan antusiasme tinggi dari berbagai sekolah...",
-          content: "Isi artikel lengkap tentang festival seni pelajar...",
-          status: "PENDING_REVIEW",
-          views: 0,
-          authorId: jurnalisUser.id,
-          categoryId: kategoriPendidikan.id,
+    for (const data of articlesData) {
+      await prisma.article.upsert({
+        where: { slug: data.slug },
+        update: {
+          title: data.title,
+          excerpt: data.excerpt,
+          content: data.content,
+          status: data.status as any,
+          views: data.views,
+          categoryId: data.categoryId,
+          tags: { set: data.tagSlugs.map((slug) => ({ slug })) },
         },
-        {
-          title: "Pemanasan Global: Fakta vs Mitos di Kalangan Pelajar",
-          slug: "pemanasan-global-fakta-vs-mitos",
-          excerpt:
-            "Banyak informasi menyesatkan tentang perubahan iklim. Mari kita bedah fakta ilmiahnya...",
-          content:
-            "Isi artikel lengkap tentang fakta dan mitos pemanasan global...",
-          status: "PENDING_REVIEW",
-          views: 0,
+        create: {
+          title: data.title,
+          slug: data.slug,
+          excerpt: data.excerpt,
+          content: data.content,
+          status: data.status as any,
+          views: data.views,
           authorId: jurnalisUser.id,
-          categoryId: kategoriTeknologi.id,
+          categoryId: data.categoryId,
+          tags: { connect: data.tagSlugs.map((slug) => ({ slug })) },
         },
-
-        // --- Artikel DRAFT ---
-        {
-          title: "Review Film: Perjuangan Pelajar di Daerah Terpencil",
-          slug: "review-film-perjuangan-pelajar",
-          excerpt:
-            "Film ini mengangkat kisah nyata yang menginspirasi tentang semangat belajar...",
-          content: "Isi artikel lengkap tentang review film...",
-          status: "DRAFT",
-          views: 0,
-          authorId: jurnalisUser.id,
-          categoryId: kategoriPendidikan.id,
-        },
-      ],
-      skipDuplicates: true,
-    });
-    console.log("✅ Data artikel dummy berhasil dibuat!");
+      });
+    }
+    console.log(
+      "✅ Data artikel dummy beserta tags berhasil dibuat/diperbarui!",
+    );
   } else {
     console.log(
       "⚠️ Gagal membuat artikel: Pastikan User Jurnalis dan Kategori sudah ada di database.",
@@ -212,9 +231,91 @@ async function main() {
   }
 
   // ==========================================
-  // 4. SEED OTP (Dummy untuk testing user belum verifikasi)
+  // 4. SEED KOMENTAR (BARU: Untuk testing Moderasi Komentar)
   // ==========================================
-  console.log("\n🔑 4. Membuat data OTP dummy...");
+  console.log("\n💬 4. Membuat data Komentar dummy...");
+
+  const memberUser1 = await prisma.user.findFirst({
+    where: { email: "rina@mediapelajar.id" },
+  });
+  const memberUser2 = await prisma.user.findFirst({
+    where: { email: "dimas@mediapelajar.id" },
+  });
+  const articleAI = await prisma.article.findFirst({
+    where: { slug: "dampak-ai-dalam-pendidikan-modern" },
+  });
+  const articleOSN = await prisma.article.findFirst({
+    where: { slug: "tips-sukses-menghadapi-osn" },
+  });
+  const articlePemanasan = await prisma.article.findFirst({
+    where: { slug: "pemanasan-global-fakta-vs-mitos" },
+  });
+
+  if (
+    memberUser1 &&
+    memberUser2 &&
+    jurnalisUser &&
+    articleAI &&
+    articleOSN &&
+    articlePemanasan
+  ) {
+    await prisma.comment.createMany({
+      data: [
+        {
+          content:
+            "Artikelnya sangat inspiratif! Saya jadi termotivasi untuk mengikuti lomba OSN tahun ini. Terima kasih kak!",
+          status: "APPROVED",
+          userId: memberUser1.id,
+          articleId: articleOSN.id,
+        },
+        {
+          content:
+            "Konten tidak berkualitas, penulisnya pasti tidak riset dulu. Sampah!",
+          status: "REJECTED",
+          userId: memberUser2.id,
+          articleId: articlePemanasan.id,
+        },
+        {
+          content:
+            "Terima kasih atas masukannya, akan saya pertimbangkan untuk artikel selanjutnya.",
+          status: "APPROVED",
+          userId: jurnalisUser.id,
+          articleId: articleAI.id,
+        },
+        {
+          content:
+            "Kunjungi website kami untuk mendapatkan hadiah jutaan rupiah!!! Klik di sini -> [link]",
+          status: "HIDDEN",
+          userId: memberUser1.id,
+          articleId: articleOSN.id,
+        },
+        {
+          content:
+            "Min, kapan artikel tentang festival seni akan dipublikasikan? Sudah submit dari kemarin.",
+          status: "PENDING",
+          userId: memberUser2.id,
+          articleId: articleAI.id,
+        },
+        {
+          content:
+            "Penjelasannya sangat mudah dipahami, terutama bagian dampak AI untuk pelajar SMP.",
+          status: "PENDING",
+          userId: memberUser1.id,
+          articleId: articleAI.id,
+        },
+      ],
+    });
+    console.log("✅ Data komentar dummy berhasil dimasukkan!");
+  } else {
+    console.log(
+      "⚠️ Gagal membuat komentar: Pastikan User dan Artikel sudah ada di database.",
+    );
+  }
+
+  // ==========================================
+  // 5. SEED OTP (Dummy untuk testing user belum verifikasi)
+  // ==========================================
+  console.log("\n🔑 5. Membuat data OTP dummy...");
   const unverifiedUsers = await prisma.user.findMany({
     where: { isVerified: false },
   });
@@ -232,13 +333,14 @@ async function main() {
   }
 
   // ==========================================
-  // 5. RINGKASAN DATA
+  // 6. RINGKASAN DATA
   // ==========================================
-  console.log("\n📊 5. Ringkasan Data di Database:");
+  console.log("\n📊 6. Ringkasan Data di Database:");
   const userCount = await prisma.user.count();
   const categoryCount = await prisma.category.count();
   const tagCount = await prisma.tag.count();
   const articleCount = await prisma.article.count();
+  const commentCount = await prisma.comment.count(); // <-- BARU
   const pendingCount = await prisma.article.count({
     where: { status: "PENDING_REVIEW" },
   });
@@ -250,7 +352,8 @@ async function main() {
   console.log(`   ├─ Total User     : ${userCount}`);
   console.log(`   ├─ Total Kategori : ${categoryCount}`);
   console.log(`   ├─ Total Tag      : ${tagCount}`);
-  console.log(`   └─ Total Artikel  : ${articleCount}`);
+  console.log(`   ├─ Total Artikel  : ${articleCount}`);
+  console.log(`   └─ Total Komentar : ${commentCount}`); // <-- BARU
   console.log(`        • Published  : ${publishedCount}`);
   console.log(`        • Pending    : ${pendingCount}`);
   console.log(`        • Draft      : ${draftCount}`);

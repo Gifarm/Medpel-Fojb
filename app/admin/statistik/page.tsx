@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Eye,
@@ -16,7 +16,7 @@ import {
   Tablet,
   Award,
   Folder,
-  ArrowUpRight,
+  Loader2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -33,6 +33,7 @@ import {
   Cell,
 } from "recharts";
 import Sidebar from "@/components/admin/Sidebar";
+import toast from "react-hot-toast";
 
 const COLORS = {
   primary: "#FCC200",
@@ -46,49 +47,32 @@ const COLORS = {
   red: "#ef4444",
 };
 
-// --- Mock Data untuk Charts ---
-const growthData = [
-  { month: "Jan", articles: 45, users: 120 },
-  { month: "Feb", articles: 52, users: 145 },
-  { month: "Mar", articles: 61, users: 180 },
-  { month: "Apr", articles: 58, users: 210 },
-  { month: "Mei", articles: 75, users: 260 },
-  { month: "Jun", articles: 89, users: 310 },
-  { month: "Jul", articles: 95, users: 380 },
-];
-
-const deviceData = [
-  { name: "Mobile", value: 65, color: COLORS.blueDark },
-  { name: "Desktop", value: 25, color: COLORS.primary },
-  { name: "Tablet", value: 10, color: COLORS.gray },
-];
-
-const topArticlesData = [
-  { name: "Tips Sukses OSN", views: 4500 },
-  { name: "Beasiswa 2024", views: 3800 },
-  { name: "Dampak AI", views: 3200 },
-  { name: "Festival Seni", views: 2100 },
-  { name: "Pemanasan Global", views: 1800 },
-];
-
-const topCategories = [
-  { name: "Pendidikan", count: 124, percentage: 85 },
-  { name: "Kegiatan Sekolah", count: 98, percentage: 70 },
-  { name: "Teknologi", count: 76, percentage: 55 },
-  { name: "Prestasi", count: 54, percentage: 40 },
-  { name: "Opini", count: 42, percentage: 30 },
-];
-
-const topJurnalis = [
-  { name: "Andi Wijaya", articles: 45, views: 12500, rank: 1 },
-  { name: "Budi Santoso", articles: 32, views: 9800, rank: 2 },
-  { name: "Siska Putri", articles: 28, views: 8400, rank: 3 },
-  { name: "Rian Hidayat", articles: 21, views: 6200, rank: 4 },
-  { name: "Dewi Lestari", articles: 18, views: 5100, rank: 5 },
-];
-
 export default function StatistikPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [statsData, setStatsData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/admin/statistics");
+        const result = await res.json();
+        if (result.success) {
+          setStatsData(result.data);
+        } else {
+          toast.error("Gagal memuat data statistik");
+        }
+      } catch (error) {
+        console.error("Gagal memuat data statistik", error);
+        toast.error("Gagal memuat data statistik");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   // Custom Tooltip Dinamis
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -110,37 +94,54 @@ export default function StatistikPage() {
     return null;
   };
 
-  const stats = [
+  if (isLoading || !statsData) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
+
+  const {
+    stats,
+    growthData,
+    deviceData,
+    topArticlesData,
+    topCategories,
+    topJurnalis,
+  } = statsData;
+
+  const displayStats = [
     {
       label: "Total Page Views",
-      val: "124,592",
-      sub: "+18% bulan ini",
+      val: stats.totalViews.toLocaleString(),
+      sub: "Dari artikel terbit",
       icon: Eye,
       trend: "up",
       color: "blue",
     },
     {
       label: "Artikel Terbit",
-      val: "412",
-      sub: "+24 artikel baru",
+      val: stats.publishedArticles.toString(),
+      sub: "Total artikel dipublikasikan",
       icon: FileText,
       trend: "up",
       color: "primary",
     },
     {
       label: "Total Pengguna",
-      val: "3,845",
-      sub: "+310 pengguna baru",
+      val: stats.totalUsers.toLocaleString(),
+      sub: "Pengguna terdaftar",
       icon: Users,
       trend: "up",
       color: "blue",
     },
     {
       label: "Total Komentar",
-      val: "1,208",
-      sub: "-5% dari bulan lalu",
+      val: stats.totalComments.toLocaleString(),
+      sub: "Semua status komentar",
       icon: MessageSquare,
-      trend: "down",
+      trend: "up",
       color: "green",
     },
   ];
@@ -180,7 +181,7 @@ export default function StatistikPage() {
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
           {/* 1. Hero Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((s, i) => (
+            {displayStats.map((s, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
@@ -369,7 +370,7 @@ export default function StatistikPage() {
                       paddingAngle={5}
                       dataKey="value"
                     >
-                      {deviceData.map((entry, index) => (
+                      {deviceData.map((entry: any, index: any) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={entry.color}
@@ -392,7 +393,7 @@ export default function StatistikPage() {
                 </div>
               </div>
               <div className="mt-4 space-y-3">
-                {deviceData.map((item, idx) => (
+                {deviceData.map((item: any, idx: any) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between text-sm"
@@ -437,7 +438,7 @@ export default function StatistikPage() {
                     Artikel Terpopuler
                   </h3>
                   <p className="text-xs text-[#C4C4C4]">
-                    5 Artikel dengan views tertinggi bulan ini
+                    5 Artikel dengan views tertinggi
                   </p>
                 </div>
               </div>
@@ -465,7 +466,7 @@ export default function StatistikPage() {
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "#1B1B1B", fontSize: 12, fontWeight: 600 }}
-                      width={100}
+                      width={120}
                     />
                     <Tooltip
                       content={<CustomTooltip />}
@@ -501,7 +502,7 @@ export default function StatistikPage() {
                 <Folder className="text-[#4F619B]" size={20} />
               </div>
               <div className="space-y-5">
-                {topCategories.map((cat, idx) => (
+                {topCategories.map((cat: any, idx: any) => (
                   <div key={idx}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-bold text-[#1B1B1B]">
@@ -538,7 +539,7 @@ export default function StatistikPage() {
                   Papan Peringkat Jurnalis
                 </h3>
                 <p className="text-xs text-[#C4C4C4]">
-                  Kontributor paling aktif dan dibaca bulan ini
+                  Kontributor paling aktif dan dibaca
                 </p>
               </div>
               <Award className="text-[#FCC200]" size={24} />
@@ -555,7 +556,7 @@ export default function StatistikPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {topJurnalis.map((jurnalis) => (
+                  {topJurnalis.map((jurnalis: any) => (
                     <tr
                       key={jurnalis.rank}
                       className="group hover:bg-[#233982]/[0.02] transition-colors"
@@ -577,9 +578,6 @@ export default function StatistikPage() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          {/* <div className="w-9 h-9 bg-[#233982]/10 text-[#233982] rounded-lg flex items-center justify-center text-sm font-bold">
-                            {jurnalis.name.charAt(0)}
-                          </div> */}
                           <span className="font-bold text-sm text-[#1B1B1B]">
                             {jurnalis.name}
                           </span>

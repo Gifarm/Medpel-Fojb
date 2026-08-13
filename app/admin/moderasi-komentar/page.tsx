@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -15,111 +15,43 @@ import {
   AlertTriangle,
   MoreHorizontal,
   User,
+  Filter,
+  Loader2,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
-
-const COLORS = {
-  primary: "#FCC200",
-  blueDark: "#233982",
-  blue: "#4F619B",
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-};
-
-// --- Mock Data Komentar ---
-const mockComments = [
-  {
-    id: 1,
-    user: "Rina Kartika",
-    userRole: "User",
-    comment:
-      "Artikelnya sangat inspiratif! Saya jadi termotivasi untuk mengikuti lomba OSN tahun ini. Terima kasih kak!",
-    articleTitle: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
-    date: "10 Menit lalu",
-    status: "Approved",
-    reports: 0,
-  },
-  {
-    id: 2,
-    user: "Anonymous_99",
-    userRole: "User",
-    comment:
-      "Konten tidak berkualitas, penulisnya pasti tidak riset dulu. Sampah!",
-    articleTitle: "Pemanasan Global: Fakta vs Mitos",
-    date: "1 Jam lalu",
-    status: "Reported",
-    reports: 3,
-  },
-  {
-    id: 3,
-    user: "Budi Santoso",
-    userRole: "Jurnalis",
-    comment:
-      "Terima kasih atas masukannya, akan saya pertimbangkan untuk artikel selanjutnya.",
-    articleTitle: "Dampak AI dalam Pendidikan Modern",
-    date: "3 Jam lalu",
-    status: "Approved",
-    reports: 0,
-  },
-  {
-    id: 4,
-    user: "SpamBot_01",
-    userRole: "User",
-    comment:
-      "Kunjungi website kami untuk mendapatkan hadiah jutaan rupiah!!! Klik di sini -> [link]",
-    articleTitle: "Beasiswa Kuliah Gratis 2024",
-    date: "5 Jam lalu",
-    status: "Hidden",
-    reports: 12,
-  },
-  {
-    id: 5,
-    user: "Siska Putri",
-    userRole: "Jurnalis",
-    comment:
-      "Min, kapan artikel tentang festival seni akan dipublikasikan? Sudah submit dari kemarin.",
-    articleTitle: "Eksplorasi Budaya: Festival Seni Pelajar",
-    date: "1 Hari lalu",
-    status: "Pending",
-    reports: 0,
-  },
-];
+import toast from "react-hot-toast";
 
 // --- Komponen Badge Status ---
-const StatusBadge = ({
-  status,
-  reports,
-}: {
-  status: string;
-  reports: number;
-}) => {
+const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
-    Approved: "bg-green-50 text-green-700 border-green-100",
-    Hidden: "bg-gray-100 text-gray-600 border-gray-200",
-    Reported: "bg-red-50 text-red-700 border-red-100",
-    Pending: "bg-yellow-50 text-yellow-700 border-yellow-100",
+    APPROVED: "bg-green-50 text-green-700 border-green-100",
+    HIDDEN: "bg-gray-100 text-gray-600 border-gray-200",
+    REJECTED: "bg-red-50 text-red-700 border-red-100",
+    PENDING: "bg-yellow-50 text-yellow-700 border-yellow-100",
   };
 
   const icons: Record<string, any> = {
-    Approved: CheckCircle2,
-    Hidden: EyeOff,
-    Reported: Flag,
-    Pending: MessageSquare,
+    APPROVED: CheckCircle2,
+    HIDDEN: EyeOff,
+    REJECTED: Trash2,
+    PENDING: MessageSquare,
   };
 
   const Icon = icons[status] || MessageSquare;
   const label =
-    status === "Reported"
-      ? `Dilaporkan (${reports})`
-      : status === "Hidden"
+    status === "REJECTED"
+      ? "Ditolak"
+      : status === "HIDDEN"
         ? "Disembunyikan"
-        : status === "Pending"
+        : status === "PENDING"
           ? "Menunggu"
           : "Disetujui";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${styles[status]}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+        styles[status] || styles.PENDING
+      }`}
     >
       <Icon size={12} />
       {label}
@@ -133,49 +65,119 @@ export default function ModerasiKomentarPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedComment, setSelectedComment] = useState<any>(null);
 
-  // Filter Data
-  const filteredComments = useMemo(() => {
-    return mockComments.filter((c) => {
-      const matchesSearch =
-        c.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.articleTitle.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "All" || c.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+  // State untuk data real dari database
+  const [comments, setComments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  // Fetch Data Komentar dari API
+  useEffect(() => {
+    const fetchComments = async () => {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams({
+          search: searchQuery,
+          status: statusFilter,
+        });
+        const res = await fetch(`/api/admin/comments?${params.toString()}`);
+        const result = await res.json();
+        if (result.success) {
+          setComments(result.data);
+        }
+      } catch (error) {
+        console.error("Gagal memuat data komentar", error);
+        toast.error("Gagal memuat data komentar");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Debounce sederhana agar tidak spam request saat mengetik
+    const timer = setTimeout(fetchComments, 300);
+    return () => clearTimeout(timer);
   }, [searchQuery, statusFilter]);
 
-  // Stats Data
+  // Stats Data (Dihitung dinamis dari data yang sudah difilter)
   const stats = [
     {
       label: "Total Komentar",
-      val: mockComments.length,
+      val: comments.length,
       icon: MessageSquare,
       color: "text-[#233982]",
       bg: "bg-[#233982]/10",
     },
     {
       label: "Perlu Tinjauan",
-      val: mockComments.filter((c) => c.status === "Pending").length,
+      val: comments.filter((c) => c.status === "PENDING").length,
       icon: MessageSquare,
       color: "text-yellow-600",
       bg: "bg-yellow-50",
     },
     {
-      label: "Dilaporkan",
-      val: mockComments.filter((c) => c.status === "Reported").length,
+      label: "Ditolak/Disembunyikan",
+      val: comments.filter(
+        (c) => c.status === "REJECTED" || c.status === "HIDDEN",
+      ).length,
       icon: Flag,
       color: "text-red-600",
       bg: "bg-red-50",
     },
     {
-      label: "Disembunyikan",
-      val: mockComments.filter((c) => c.status === "Hidden").length,
-      icon: EyeOff,
-      color: "text-gray-600",
-      bg: "bg-gray-100",
+      label: "Disetujui",
+      val: comments.filter((c) => c.status === "APPROVED").length,
+      icon: CheckCircle2,
+      color: "text-green-600",
+      bg: "bg-green-50",
     },
   ];
+
+  // --- OPTIMISTIC UI UPDATE: Langsung ubah status di frontend, lalu sync ke backend ---
+  const handleUpdateStatus = async (commentId: string, newStatus: string) => {
+    setIsActionLoading(true);
+
+    // 1. Simpan state asli untuk rollback jika gagal
+    const originalComments = [...comments];
+
+    // 2. LANGSUNG update state di frontend (Instant UI Change!)
+    const updatedComments = comments.map((c) =>
+      c.id === commentId ? { ...c, status: newStatus } : c,
+    );
+    setComments(updatedComments);
+
+    try {
+      const res = await fetch("/api/admin/comments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: commentId, status: newStatus }),
+      });
+
+      const result = await res.json();
+      if (!result.success) {
+        // 3. Rollback jika server menolak
+        setComments(originalComments);
+        toast.error(result.error || "Gagal memperbarui status");
+      } else {
+        // 4. Sukses: Tampilkan toast dan tutup modal jika sedang terbuka
+        const actionText =
+          newStatus === "APPROVED"
+            ? "disetujui"
+            : newStatus === "HIDDEN"
+              ? "disembunyikan"
+              : "ditolak";
+        toast.success(`Komentar berhasil ${actionText}!`);
+
+        if (selectedComment?.id === commentId) {
+          setSelectedComment(null);
+        }
+      }
+    } catch (error) {
+      // 5. Rollback jika error jaringan
+      setComments(originalComments);
+      toast.error("Terjadi kesalahan jaringan. Perubahan dibatalkan.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
@@ -259,12 +261,12 @@ export default function ModerasiKomentarPage() {
                   className="appearance-none w-full md:w-48 bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-4 pr-10 text-sm font-semibold text-[#1B1B1B] focus:ring-2 focus:ring-[#233982]/20 outline-none cursor-pointer"
                 >
                   <option value="All">Semua Status</option>
-                  <option value="Approved">Disetujui</option>
-                  <option value="Pending">Menunggu</option>
-                  <option value="Reported">Dilaporkan</option>
-                  <option value="Hidden">Disembunyikan</option>
+                  <option value="PENDING">Menunggu</option>
+                  <option value="APPROVED">Disetujui</option>
+                  <option value="HIDDEN">Disembunyikan</option>
+                  <option value="REJECTED">Ditolak</option>
                 </select>
-                <Flag
+                <Filter
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#C4C4C4] pointer-events-none"
                   size={14}
                 />
@@ -286,35 +288,33 @@ export default function ModerasiKomentarPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredComments.length > 0 ? (
-                    filteredComments.map((comment) => (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#233982] mx-auto"></div>
+                      </td>
+                    </tr>
+                  ) : comments.length > 0 ? (
+                    comments.map((comment) => (
                       <motion.tr
                         key={comment.id}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className={`group transition-colors ${
-                          comment.status === "Reported"
-                            ? "bg-red-50/30 hover:bg-red-50/60"
+                          comment.status === "REJECTED" ||
+                          comment.status === "HIDDEN"
+                            ? "bg-gray-50/50 hover:bg-gray-100/50"
                             : "hover:bg-[#233982]/[0.02]"
                         }`}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-start gap-3 max-w-md">
-                            {/* <div
-                              className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                                comment.userRole === "Jurnalis"
-                                  ? "bg-[#FCC200]/15 text-[#B48A00]"
-                                  : "bg-[#233982]/10 text-[#233982]"
-                              }`}
-                            >
-                              {comment.user.charAt(0)}
-                            </div> */}
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
                                 <p className="font-bold text-sm text-[#1B1B1B] truncate">
                                   {comment.user}
                                 </p>
-                                {comment.userRole === "Jurnalis" && (
+                                {comment.userRole === "JURNALIS" && (
                                   <span className="text-[9px] font-bold text-[#B48A00] bg-[#FCC200]/20 px-1.5 py-0.5 rounded">
                                     JURNALIS
                                   </span>
@@ -343,10 +343,7 @@ export default function ModerasiKomentarPage() {
                           </p>
                         </td>
                         <td className="px-6 py-4">
-                          <StatusBadge
-                            status={comment.status}
-                            reports={comment.reports}
-                          />
+                          <StatusBadge status={comment.status} />
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">
@@ -357,28 +354,41 @@ export default function ModerasiKomentarPage() {
                             >
                               <MoreHorizontal size={18} />
                             </button>
-                            {comment.status !== "Approved" && (
+
+                            {/* Tombol aksi cepat di tabel */}
+                            {comment.status !== "APPROVED" && (
                               <button
+                                onClick={() =>
+                                  handleUpdateStatus(comment.id, "APPROVED")
+                                }
                                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-all"
                                 title="Setujui"
                               >
                                 <CheckCircle2 size={18} />
                               </button>
                             )}
-                            {comment.status !== "Hidden" && (
+                            {comment.status !== "HIDDEN" && (
                               <button
+                                onClick={() =>
+                                  handleUpdateStatus(comment.id, "HIDDEN")
+                                }
                                 className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-all"
                                 title="Sembunyikan"
                               >
                                 <EyeOff size={18} />
                               </button>
                             )}
-                            <button
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                              title="Hapus Permanen"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            {comment.status !== "REJECTED" && (
+                              <button
+                                onClick={() =>
+                                  handleUpdateStatus(comment.id, "REJECTED")
+                                }
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                title="Tolak/Hapus"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </motion.tr>
@@ -405,26 +415,11 @@ export default function ModerasiKomentarPage() {
               </table>
             </div>
 
-            {/* Pagination (Dummy) */}
+            {/* Pagination Info */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-[#C4C4C4]">
-                Menampilkan {filteredComments.length} dari {mockComments.length}{" "}
-                komentar
+                Menampilkan {comments.length} komentar
               </p>
-              <div className="flex items-center gap-2">
-                <button
-                  className="px-3 py-1.5 text-xs font-bold text-[#C4C4C4] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                  disabled
-                >
-                  Sebelumnya
-                </button>
-                <button className="px-3 py-1.5 text-xs font-bold text-[#233982] bg-[#233982]/10 border border-[#233982]/20 rounded-lg">
-                  1
-                </button>
-                <button className="px-3 py-1.5 text-xs font-bold text-[#C4C4C4] border border-gray-200 rounded-lg hover:bg-gray-50">
-                  Selanjutnya
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -449,21 +444,13 @@ export default function ModerasiKomentarPage() {
             >
               {/* Modal Header */}
               <div
-                className={`px-8 py-6 border-b border-gray-100 flex items-center justify-between ${
-                  selectedComment.status === "Reported"
-                    ? "bg-red-50/50"
-                    : "bg-gray-50/50"
-                }`}
+                className={`px-8 py-6 border-b border-gray-100 flex items-center justify-between ${selectedComment.status === "REJECTED" ? "bg-red-50/50" : "bg-gray-50/50"}`}
               >
                 <div className="flex items-center gap-4">
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                      selectedComment.status === "Reported"
-                        ? "bg-red-100 text-red-600"
-                        : "bg-[#233982]/10 text-[#233982]"
-                    }`}
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedComment.status === "REJECTED" ? "bg-red-100 text-red-600" : "bg-[#233982]/10 text-[#233982]"}`}
                   >
-                    {selectedComment.status === "Reported" ? (
+                    {selectedComment.status === "REJECTED" ? (
                       <AlertTriangle size={24} />
                     ) : (
                       <MessageSquare size={24} />
@@ -474,7 +461,8 @@ export default function ModerasiKomentarPage() {
                       Detail Komentar
                     </h3>
                     <p className="text-xs text-[#C4C4C4] mt-1">
-                      ID: #{selectedComment.id} • {selectedComment.date}
+                      ID: #{selectedComment.id.slice(0, 8)} •{" "}
+                      {selectedComment.date}
                     </p>
                   </div>
                 </div>
@@ -491,11 +479,7 @@ export default function ModerasiKomentarPage() {
                 {/* User Info */}
                 <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                      selectedComment.userRole === "Jurnalis"
-                        ? "bg-[#FCC200]/20 text-[#B48A00]"
-                        : "bg-[#233982]/10 text-[#233982]"
-                    }`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${selectedComment.userRole === "JURNALIS" ? "bg-[#FCC200]/20 text-[#B48A00]" : "bg-[#233982]/10 text-[#233982]"}`}
                   >
                     {selectedComment.user.charAt(0)}
                   </div>
@@ -507,14 +491,6 @@ export default function ModerasiKomentarPage() {
                       Peran: {selectedComment.userRole}
                     </p>
                   </div>
-                  {selectedComment.reports > 0 && (
-                    <div className="ml-auto flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 rounded-lg border border-red-100">
-                      <Flag size={12} />
-                      <span className="text-xs font-bold">
-                        {selectedComment.reports} Laporan
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Article Context */}
@@ -548,26 +524,66 @@ export default function ModerasiKomentarPage() {
 
               {/* Modal Footer (Actions) */}
               <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <StatusBadge
-                  status={selectedComment.status}
-                  reports={selectedComment.reports}
-                />
+                <StatusBadge status={selectedComment.status} />
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedComment(null)}
                     className="px-5 py-2.5 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] transition-colors"
+                    disabled={isActionLoading}
                   >
                     Tutup
                   </button>
-                  <button className="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2">
-                    <EyeOff size={16} /> Sembunyikan
-                  </button>
-                  <button className="px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all flex items-center gap-2">
-                    <Trash2 size={16} /> Hapus
-                  </button>
-                  <button className="px-5 py-2.5 text-sm font-bold text-white bg-[#233982] rounded-xl hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20 flex items-center gap-2">
-                    <CheckCircle2 size={16} /> Setujui
-                  </button>
+
+                  {selectedComment.status !== "APPROVED" && (
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(selectedComment.id, "APPROVED")
+                      }
+                      disabled={isActionLoading}
+                      className="px-5 py-2.5 text-sm font-bold text-green-600 bg-green-50 border border-green-100 rounded-xl hover:bg-green-100 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isActionLoading ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      Setujui
+                    </button>
+                  )}
+
+                  {selectedComment.status !== "HIDDEN" && (
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(selectedComment.id, "HIDDEN")
+                      }
+                      disabled={isActionLoading}
+                      className="px-5 py-2.5 text-sm font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isActionLoading ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <EyeOff size={16} />
+                      )}
+                      Sembunyikan
+                    </button>
+                  )}
+
+                  {selectedComment.status !== "REJECTED" && (
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(selectedComment.id, "REJECTED")
+                      }
+                      disabled={isActionLoading}
+                      className="px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isActionLoading ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                      Tolak
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

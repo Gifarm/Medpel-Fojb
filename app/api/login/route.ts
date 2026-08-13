@@ -13,7 +13,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validated = loginSchema.parse(body);
 
-    // 1. Cek apakah user ada di database
     const user = await prisma.user.findUnique({
       where: { email: validated.email },
     });
@@ -25,22 +24,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Cek apakah password cocok
     const isPasswordValid = await bcrypt.compare(
       validated.password,
       user.password,
     );
-
     if (!isPasswordValid) {
       return NextResponse.json({ error: "Password salah" }, { status: 401 });
     }
 
-    // 3. Cek apakah email sudah terverifikasi
     if (!user.isVerified) {
       return NextResponse.json(
         {
-          error:
-            "Email belum terverifikasi. Silakan verifikasi OTP terlebih dahulu.",
+          error: "Email belum terverifikasi.",
           needVerification: true,
           email: user.email,
         },
@@ -48,8 +43,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Login berhasil - return data user (tanpa password)
-    return NextResponse.json({
+    // ✅ BUAT RESPONSE DAN SET COOKIE DI SINI
+    const response = NextResponse.json({
       success: true,
       message: "Login berhasil",
       user: {
@@ -59,6 +54,26 @@ export async function POST(req: Request) {
         role: user.role,
       },
     });
+
+    // Set cookie (berlaku 7 hari)
+    const maxAge = 7 * 24 * 60 * 60;
+    response.cookies.set("auth_token", user.id, {
+      httpOnly: false, // false agar bisa dibaca frontend jika perlu
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+
+    response.cookies.set("user_role", user.role, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     if (error instanceof z.ZodError) {

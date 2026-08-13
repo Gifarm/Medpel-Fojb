@@ -1,19 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  User,
-  Mail,
-  Lock,
-  Save,
-  Upload,
-  Shield,
-  Eye,
-  EyeOff,
-  Camera,
-} from "lucide-react";
+import { User, Mail, Lock, Save, Shield, Eye, EyeOff } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import toast from "react-hot-toast";
 
@@ -81,8 +72,8 @@ export default function PengaturanAkunPage() {
 
   // State Form Data
   const [profile, setProfile] = useState({
-    name: "Administrator",
-    email: "admin@mediapelajar.id",
+    name: "",
+    email: "",
     role: "Admin",
   });
 
@@ -92,6 +83,23 @@ export default function PengaturanAkunPage() {
     confirmPass: "",
   });
 
+  // 1. Ambil data user dari localStorage saat komponen dimuat
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setProfile({
+          name: user.name || "",
+          email: user.email || "",
+          role: user.role || "Admin",
+        });
+      } catch (error) {
+        console.error("Gagal memuat data user", error);
+      }
+    }
+  }, []);
+
   const handleProfileChange = (field: string, val: string) => {
     setProfile({ ...profile, [field]: val });
   };
@@ -100,23 +108,62 @@ export default function PengaturanAkunPage() {
     setPasswords({ ...passwords, [field]: val });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  // 2. Fungsi Simpan ke Database (Real API Call)
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validasi sederhana password
+    // Validasi password
     if (passwords.newPass && passwords.newPass !== passwords.confirmPass) {
       toast.error("Password baru dan konfirmasi password tidak cocok!");
       return;
     }
 
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      toast.error("Sesi tidak valid. Silakan login ulang.");
+      return;
+    }
+
+    const user = JSON.parse(storedUser);
+
     setIsSaving(true);
-    // Simulasi API Call
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/admin/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          name: profile.name,
+          email: profile.email,
+          currentPassword: passwords.oldPass,
+          newPassword: passwords.newPass,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success("Profil dan pengaturan akun berhasil diperbarui!");
+
+        // Update localStorage dengan data terbaru agar UI tetap sinkron
+        const updatedUser = {
+          ...user,
+          name: result.data.name,
+          email: result.data.email,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+
+        // Reset field password setelah sukses
+        setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
+      } else {
+        toast.error(result.error || "Gagal memperbarui profil");
+      }
+    } catch (error) {
+      console.error("Update profile error:", error);
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsSaving(false);
-      toast.success("Profil dan pengaturan akun berhasil diperbarui!");
-      // Reset field password setelah sukses
-      setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
-    }, 1000);
+    }
   };
 
   return (
@@ -145,7 +192,7 @@ export default function PengaturanAkunPage() {
 
         <div className="p-8 max-w-[900px] mx-auto space-y-8 pb-24">
           <form onSubmit={handleSave}>
-            {/* 1. Avatar & Informasi Dasar */}
+            {/* 1. Informasi Dasar */}
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -160,15 +207,12 @@ export default function PengaturanAkunPage() {
                     Informasi Profil
                   </h3>
                   <p className="text-xs text-[#C4C4C4]">
-                    Data identitas akun administrator
+                    Data identitas yang digunakan untuk login
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                {/* Avatar Upload Area */}
-
-                {/* Form Fields */}
                 <div className="flex-1 w-full">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                     <InputField
@@ -237,7 +281,6 @@ export default function PengaturanAkunPage() {
                   rightIcon={showOldPass ? EyeOff : Eye}
                   onRightIconClick={() => setShowOldPass(!showOldPass)}
                 />
-                {/* Spacer untuk layout grid */}
                 <div className="hidden md:block" />
 
                 <InputField
@@ -276,6 +319,10 @@ export default function PengaturanAkunPage() {
             >
               <button
                 type="button"
+                onClick={() => {
+                  setProfile({ name: "", email: "", role: "Admin" }); // Reset ke data awal bisa ditambahkan di sini
+                  setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
+                }}
                 className="px-6 py-3 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] bg-white border border-gray-200 rounded-xl transition-all hover:bg-gray-50"
               >
                 Batal

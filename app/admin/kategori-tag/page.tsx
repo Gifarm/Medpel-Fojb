@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -14,36 +15,19 @@ import {
   Hash,
   Layers,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
-
-// --- Mock Data ---
-const initialCategories = [
-  { id: 1, name: "Pendidikan", slug: "pendidikan", count: 124 },
-  { id: 2, name: "Teknologi", slug: "teknologi", count: 85 },
-  { id: 3, name: "Kegiatan Sekolah", slug: "kegiatan-sekolah", count: 156 },
-  { id: 4, name: "Prestasi", slug: "prestasi", count: 67 },
-  { id: 5, name: "Opini & Inspirasi", slug: "opini-inspirasi", count: 92 },
-  { id: 6, name: "Budaya & Seni", slug: "budaya-seni", count: 43 },
-];
-
-const initialTags = [
-  { id: 1, name: "OSN", slug: "osn", count: 45 },
-  { id: 2, name: "Beasiswa", slug: "beasiswa", count: 89 },
-  { id: 3, name: "Lomba", slug: "lomba", count: 112 },
-  { id: 4, name: "Coding", slug: "coding", count: 34 },
-  { id: 5, name: "Lingkungan", slug: "lingkungan", count: 28 },
-  { id: 6, name: "Sastra", slug: "sastra", count: 56 },
-  { id: 7, name: "Fisika", slug: "fisika", count: 19 },
-  { id: 8, name: "Sejarah", slug: "sejarah", count: 22 },
-];
+import toast from "react-hot-toast";
 
 export default function KategoriTagPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // State Data
-  const [categories, setCategories] = useState(initialCategories);
-  const [tags, setTags] = useState(initialTags);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // State Search
   const [searchCat, setSearchCat] = useState("");
@@ -55,22 +39,77 @@ export default function KategoriTagPage() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [formData, setFormData] = useState({ name: "", slug: "" });
 
+  // Fungsi Fetch Data
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [catRes, tagRes] = await Promise.all([
+        fetch("/api/admin/categories"),
+        fetch("/api/admin/tags"),
+      ]);
+
+      const catData = await catRes.json();
+      const tagData = await tagRes.json();
+
+      if (catData.success) setCategories(catData.data);
+      if (tagData.success) setTags(tagData.data);
+    } catch (error) {
+      console.error("Gagal memuat data", error);
+      toast.error("Gagal memuat data kategori & tag");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   // Filter Data
-  const filteredCategories = useMemo(
-    () =>
-      categories.filter((c) =>
-        c.name.toLowerCase().includes(searchCat.toLowerCase()),
-      ),
-    [categories, searchCat],
+  const filteredCategories = categories.filter((c) =>
+    c.name.toLowerCase().includes(searchCat.toLowerCase()),
   );
 
-  const filteredTags = useMemo(
-    () =>
-      tags.filter((t) =>
-        t.name.toLowerCase().includes(searchTag.toLowerCase()),
-      ),
-    [tags, searchTag],
+  const filteredTags = tags.filter((t) =>
+    t.name.toLowerCase().includes(searchTag.toLowerCase()),
   );
+
+  // Stats Data (Dinamis)
+  const sortedCategories = [...categories].sort((a, b) => b.count - a.count);
+  const sortedTags = [...tags].sort((a, b) => b.count - a.count);
+
+  const stats = [
+    {
+      label: "Total Kategori",
+      val: categories.length,
+      icon: Folder,
+      color: "text-[#233982]",
+      bg: "bg-[#233982]/10",
+    },
+    {
+      label: "Total Tag",
+      val: tags.length,
+      icon: Hash,
+      color: "text-[#FCC200]",
+      bg: "bg-[#FCC200]/15",
+    },
+    {
+      label: "Kategori Terpopuler",
+      val: sortedCategories[0]?.name || "-",
+      icon: TrendingUp,
+      color: "text-green-600",
+      bg: "bg-green-50",
+      isText: true,
+    },
+    {
+      label: "Tag Terpopuler",
+      val: sortedTags[0]?.name || "-",
+      icon: Layers,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+      isText: true,
+    },
+  ];
 
   // Handlers
   const openModal = (
@@ -98,58 +137,84 @@ export default function KategoriTagPage() {
       slug: val
         .toLowerCase()
         .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, ""), // Auto slug
+        .replace(/[^a-z0-9-]/g, ""),
     });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (modalMode === "add") {
-      const newItem = {
-        id: Date.now(),
-        name: formData.name,
-        slug: formData.slug,
-        count: 0,
-      };
-      if (modalType === "category") setCategories([...categories, newItem]);
-      else setTags([...tags, newItem]);
-    } else {
-      if (modalType === "category") {
-        setCategories(
-          categories.map((c) =>
-            c.id === selectedItem.id ? { ...c, ...formData } : c,
-          ),
+    setIsSaving(true);
+
+    try {
+      const method = modalMode === "add" ? "POST" : "PATCH";
+      const url =
+        modalType === "category" ? "/api/admin/categories" : "/api/admin/tags";
+      const body =
+        modalMode === "add" ? formData : { id: selectedItem.id, ...formData };
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success(
+          modalMode === "add"
+            ? "Berhasil ditambahkan!"
+            : "Berhasil diperbarui!",
         );
+        closeModal();
+        await fetchData(); // Refresh data agar count dan list terbaru muncul
       } else {
-        setTags(
-          tags.map((t) =>
-            t.id === selectedItem.id ? { ...t, ...formData } : t,
-          ),
-        );
+        toast.error(result.error || "Gagal menyimpan data");
       }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
+      setIsSaving(false);
     }
-    closeModal();
   };
 
-  const handleDelete = (type: "category" | "tag", id: number) => {
-    if (type === "category")
-      setCategories(categories.filter((c) => c.id !== id));
-    else setTags(tags.filter((t) => t.id !== id));
+  const handleDelete = async (type: "category" | "tag", id: string) => {
+    if (
+      !confirm(
+        `Yakin ingin menghapus ${type === "category" ? "kategori" : "tag"} ini?`,
+      )
+    )
+      return;
+
+    try {
+      const url =
+        type === "category"
+          ? `/api/admin/categories?id=${id}`
+          : `/api/admin/tags?id=${id}`;
+      const res = await fetch(url, { method: "DELETE" });
+      const result = await res.json();
+
+      if (result.success) {
+        toast.success("Berhasil dihapus!");
+        await fetchData(); // Refresh data
+      } else {
+        toast.error(result.error || "Gagal menghapus data");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
-      {/* --- SIDEBAR --- */}
       <Sidebar
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
 
-      {/* --- MAIN CONTENT --- */}
       <main
         className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
       >
-        {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#1B1B1B]">Kategori & Tag</h2>
@@ -162,38 +227,7 @@ export default function KategoriTagPage() {
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
           {/* 1. Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                label: "Total Kategori",
-                val: categories.length,
-                icon: Folder,
-                color: "text-[#233982]",
-                bg: "bg-[#233982]/10",
-              },
-              {
-                label: "Total Tag",
-                val: tags.length,
-                icon: Hash,
-                color: "text-[#FCC200]",
-                bg: "bg-[#FCC200]/15",
-              },
-              {
-                label: "Kategori Terpopuler",
-                val: "Kegiatan Sekolah",
-                icon: TrendingUp,
-                color: "text-green-600",
-                bg: "bg-green-50",
-                isText: true,
-              },
-              {
-                label: "Tag Terpopuler",
-                val: "Lomba",
-                icon: Layers,
-                color: "text-blue-600",
-                bg: "bg-blue-50",
-                isText: true,
-              },
-            ].map((stat, i) => (
+            {stats.map((stat, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
@@ -266,7 +300,14 @@ export default function KategoriTagPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {filteredCategories.length > 0 ? (
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2
+                      className="animate-spin text-[#233982]"
+                      size={32}
+                    />
+                  </div>
+                ) : filteredCategories.length > 0 ? (
                   filteredCategories.map((cat) => (
                     <div
                       key={cat.id}
@@ -359,7 +400,14 @@ export default function KategoriTagPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {filteredTags.length > 0 ? (
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2
+                      className="animate-spin text-[#FCC200]"
+                      size={32}
+                    />
+                  </div>
+                ) : filteredTags.length > 0 ? (
                   filteredTags.map((tag) => (
                     <div
                       key={tag.id}
@@ -508,9 +556,15 @@ export default function KategoriTagPage() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 text-sm font-bold text-white bg-[#233982] rounded-xl hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20 flex items-center gap-2"
+                    disabled={isSaving}
+                    className="px-5 py-2.5 text-sm font-bold text-white bg-[#233982] rounded-xl hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20 flex items-center gap-2 disabled:opacity-70"
                   >
-                    <Save size={16} /> Simpan
+                    {isSaving ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Save size={16} />
+                    )}
+                    Simpan
                   </button>
                 </div>
               </form>
