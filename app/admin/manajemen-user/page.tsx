@@ -8,11 +8,8 @@ import {
   Search,
   Filter,
   UserPlus,
-  Shield,
-  ShieldAlert,
   User,
   CheckCircle2,
-  XCircle,
   Clock,
   Edit3,
   Trash2,
@@ -20,19 +17,12 @@ import {
   Save,
   Download,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import toast from "react-hot-toast";
 
-const COLORS = {
-  primary: "#FCC200",
-  blueDark: "#233982",
-  blue: "#4F619B",
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-};
-
-// --- Komponen Badge Role ---
+// ... (Komponen RoleBadge dan StatusBadge tetap sama seperti sebelumnya) ...
 const RoleBadge = ({ role }: { role: string }) => {
   const styles: Record<string, string> = {
     Admin: "bg-[#233982]/10 text-[#233982] border-[#233982]/20",
@@ -52,25 +42,19 @@ const RoleBadge = ({ role }: { role: string }) => {
   );
 };
 
-// --- Komponen Badge Status ---
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     Active: "bg-green-50 text-green-700 border-green-100",
-    Suspended: "bg-red-50 text-red-700 border-red-100",
     Pending: "bg-yellow-50 text-yellow-700 border-yellow-100",
   };
 
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
-        styles[status]
+        styles[status] || styles.Pending
       }`}
     >
-      {status === "Suspended"
-        ? "Ditangguhkan"
-        : status === "Pending"
-          ? "Menunggu"
-          : "Aktif"}
+      {status === "Pending" ? "Menunggu" : "Aktif"}
     </span>
   );
 };
@@ -83,12 +67,14 @@ export default function ManajemenUserPage() {
 
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // <-- BARU: State untuk modal hapus
+  const [userToDelete, setUserToDelete] = useState<any>(null); // <-- BARU: User yang akan dihapus
 
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- BARU: State untuk Pagination ---
+  // State untuk Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -100,7 +86,7 @@ export default function ManajemenUserPage() {
     role: "MEMBER",
   });
 
-  // Fungsi Fetch Data (dipisah agar bisa dipanggil manual)
+  // Fungsi Fetch Data
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -122,14 +108,13 @@ export default function ManajemenUserPage() {
     }
   };
 
-  // Fetch Data User dari API dengan Debounce
   useEffect(() => {
-    setCurrentPage(1); // <-- Reset ke halaman 1 setiap filter/pencarian berubah
+    setCurrentPage(1);
     const timer = setTimeout(fetchData, 300);
     return () => clearTimeout(timer);
   }, [searchQuery, roleFilter, statusFilter]);
 
-  // Stats Data (Otomatis update real-time berdasarkan state 'users')
+  // Stats Data
   const stats = [
     {
       label: "Total Pengguna",
@@ -146,13 +131,6 @@ export default function ManajemenUserPage() {
       bg: "bg-green-50",
     },
     {
-      label: "Ditangguhkan",
-      val: users.filter((u) => u.status === "Suspended").length.toString(),
-      icon: ShieldAlert,
-      color: "text-red-600",
-      bg: "bg-red-50",
-    },
-    {
       label: "Menunggu Verifikasi",
       val: users.filter((u) => u.status === "Pending").length.toString(),
       icon: Clock,
@@ -161,7 +139,7 @@ export default function ManajemenUserPage() {
     },
   ];
 
-  // --- 1. OPTIMISTIC UI UPDATE UNTUK EDIT ---
+  // ... (handleSaveUser tetap sama) ...
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
@@ -205,7 +183,50 @@ export default function ManajemenUserPage() {
     }
   };
 
-  // --- 2. FUNGSI TAMBAH USER (DIPERBAIKI: Langsung fetch tanpa refresh) ---
+  // --- BARU: Fungsi untuk membuka modal hapus
+  const openDeleteModal = (user: any) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  // --- BARU: Fungsi untuk menutup modal hapus
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setUserToDelete(null);
+  };
+
+  // --- BARU: Fungsi hapus user dengan modal konfirmasi
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setIsSaving(true);
+    const originalUsers = [...users];
+
+    // Optimistic update: hapus dari UI dulu
+    setUsers(users.filter((u) => u.id !== userToDelete.id));
+
+    try {
+      const res = await fetch(`/api/admin/users?id=${userToDelete.id}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+
+      if (!result.success) {
+        setUsers(originalUsers); // Rollback jika gagal
+        toast.error(result.error || "Gagal menghapus pengguna");
+      } else {
+        toast.success(`Pengguna "${userToDelete.name}" berhasil dihapus!`);
+      }
+    } catch (error) {
+      setUsers(originalUsers); // Rollback jika error
+      toast.error("Terjadi kesalahan jaringan. Perubahan dibatalkan.");
+    } finally {
+      setIsSaving(false);
+      closeDeleteModal();
+    }
+  };
+
+  // ... (handleAddUser dan handleExportCSV tetap sama) ...
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -222,8 +243,6 @@ export default function ManajemenUserPage() {
         toast.success("Pengguna baru berhasil ditambahkan!");
         setIsAddModalOpen(false);
         setNewUser({ name: "", email: "", password: "", role: "MEMBER" });
-
-        // LANGSUNG panggil fetchData() agar user baru langsung muncul di tabel
         await fetchData();
       } else {
         toast.error(result.error || "Gagal menambahkan pengguna");
@@ -235,7 +254,6 @@ export default function ManajemenUserPage() {
     }
   };
 
-  // --- 3. FUNGSI EXPORT CSV ---
   const handleExportCSV = () => {
     if (users.length === 0) {
       toast.error("Tidak ada data untuk diexport");
@@ -250,7 +268,6 @@ export default function ManajemenUserPage() {
       "Jumlah Artikel",
       "Tanggal Bergabung",
     ];
-
     const rows = users.map((u) => [
       `"${u.name}"`,
       `"${u.email}"`,
@@ -265,7 +282,6 @@ export default function ManajemenUserPage() {
       headers.join(",") +
       "\n" +
       rows.map((e) => e.join(",")).join("\n");
-
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -280,7 +296,7 @@ export default function ManajemenUserPage() {
     toast.success("File CSV berhasil diunduh!");
   };
 
-  // --- Logika Pagination ---
+  // Logika Pagination
   const totalPages = Math.ceil(users.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -308,22 +324,20 @@ export default function ManajemenUserPage() {
               onClick={handleExportCSV}
               className="px-4 py-2 bg-white border border-gray-200 text-[#1B1B1B] text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-gray-50 transition-all"
             >
-              <Download size={16} />
-              Export CSV
+              <Download size={16} /> Export CSV
             </button>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="px-4 py-2 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20"
             >
-              <UserPlus size={16} />
-              Tambah User
+              <UserPlus size={16} /> Tambah User
             </button>
           </div>
         </header>
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
-          {/* 1. Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {stats.map((stat, i) => (
               <motion.div
                 key={i}
@@ -349,7 +363,7 @@ export default function ManajemenUserPage() {
             ))}
           </div>
 
-          {/* 2. Filter & Search Bar */}
+          {/* Filter & Search Bar */}
           <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:w-96">
               <Search
@@ -390,7 +404,6 @@ export default function ManajemenUserPage() {
                 >
                   <option value="All">Semua Status</option>
                   <option value="Active">Aktif</option>
-                  <option value="Suspended">Ditangguhkan</option>
                   <option value="Pending">Menunggu</option>
                 </select>
                 <Filter
@@ -401,7 +414,7 @@ export default function ManajemenUserPage() {
             </div>
           </div>
 
-          {/* 3. Data Table */}
+          {/* Data Table */}
           <div className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -467,51 +480,13 @@ export default function ManajemenUserPage() {
                             >
                               <Edit3 size={18} />
                             </button>
+                            {/* Tombol Hapus dengan Modal Konfirmasi */}
                             <button
-                              onClick={async () => {
-                                const newStatus =
-                                  user.status === "Suspended"
-                                    ? "Active"
-                                    : "Suspended";
-                                const originalUsers = [...users];
-                                setUsers(
-                                  users.map((u) =>
-                                    u.id === user.id
-                                      ? { ...u, status: newStatus }
-                                      : u,
-                                  ),
-                                );
-                                try {
-                                  await fetch("/api/admin/users", {
-                                    method: "PATCH",
-                                    headers: {
-                                      "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                      id: user.id,
-                                      status: newStatus,
-                                    }),
-                                  });
-                                  toast.success(
-                                    `Status berhasil diubah menjadi ${newStatus === "Active" ? "Aktif" : "Ditangguhkan"}`,
-                                  );
-                                } catch (err) {
-                                  setUsers(originalUsers);
-                                  toast.error("Gagal mengubah status");
-                                }
-                              }}
-                              className={`p-2 rounded-lg transition-all ${user.status === "Suspended" ? "text-green-600 hover:bg-green-50" : "text-red-600 hover:bg-red-50"}`}
-                              title={
-                                user.status === "Suspended"
-                                  ? "Aktifkan Kembali"
-                                  : "Tangguhkan"
-                              }
+                              onClick={() => openDeleteModal(user)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Hapus User"
                             >
-                              {user.status === "Suspended" ? (
-                                <CheckCircle2 size={18} />
-                              ) : (
-                                <ShieldAlert size={18} />
-                              )}
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </td>
@@ -536,7 +511,7 @@ export default function ManajemenUserPage() {
               </table>
             </div>
 
-            {/* --- BARU: Pagination Controls --- */}
+            {/* Pagination Controls */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-[#C4C4C4]">
                 Menampilkan {users.length > 0 ? startIndex + 1 : 0} -{" "}
@@ -652,7 +627,6 @@ export default function ManajemenUserPage() {
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-medium text-[#1B1B1B] focus:ring-2 focus:ring-[#233982]/20 focus:border-[#233982] outline-none transition-all appearance-none"
                     >
                       <option value="Active">Aktif</option>
-                      <option value="Suspended">Ditangguhkan</option>
                       <option value="Pending">Menunggu</option>
                     </select>
                   </div>
@@ -701,6 +675,7 @@ export default function ManajemenUserPage() {
               onClick={(e) => e.stopPropagation()}
               className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col"
             >
+              {/* ... (konten modal tambah user tetap sama) ... */}
               <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                 <div>
                   <h3 className="text-lg font-bold text-[#1B1B1B]">
@@ -761,8 +736,7 @@ export default function ManajemenUserPage() {
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-4 text-sm font-medium text-[#1B1B1B] focus:ring-2 focus:ring-[#233982]/20 focus:border-[#233982] outline-none transition-all"
                   />
                   <p className="text-[10px] text-[#C4C4C4] mt-1">
-                    Minimal 8 karakter. User akan diminta mengganti saat login
-                    pertama.
+                    Minimal 8 karakter.
                   </p>
                 </div>
                 <div>
@@ -804,6 +778,83 @@ export default function ManajemenUserPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- BARU: MODAL KONFIRMASI HAPUS USER --- */}
+      <AnimatePresence>
+        {isDeleteModalOpen && userToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeDeleteModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-5 border-b border-gray-100 bg-red-50/50 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[#1B1B1B]">
+                    Hapus Pengguna?
+                  </h3>
+                  <p className="text-xs text-[#C4C4C4] mt-1">
+                    Tindakan ini tidak dapat dibatalkan
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6">
+                <p className="text-sm text-[#1B1B1B] mb-4">
+                  Anda yakin ingin menghapus pengguna{" "}
+                  <span className="font-bold text-[#233982]">
+                    {userToDelete.name}
+                  </span>{" "}
+                  secara permanen?
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <p className="text-xs text-yellow-800">
+                    <span className="font-bold">Perhatian:</span> Tindakan ini
+                    akan menghapus semua data pengguna termasuk artikel dan
+                    komentar yang pernah dibuat.
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-5 py-2.5 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] transition-colors"
+                  disabled={isSaving}
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={isSaving}
+                  className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-md shadow-red-600/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                  Ya, Hapus Pengguna
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

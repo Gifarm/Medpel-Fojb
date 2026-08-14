@@ -16,7 +16,7 @@ export default function Footer() {
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-6">
               <h1 className="text-lg font-bold tracking-tight text-[#233982]">
-                Med<span className="text-[#FCC200]">Pel</span>
+                Media<span className="text-[#FCC200]">Pelajar</span>
               </h1>
             </div>
             <p className="text-sm text-gray-500 leading-relaxed">

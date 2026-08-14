@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -15,6 +15,7 @@ import {
   MessageSquare,
   TrendingUp,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import {
   BarChart,
@@ -26,6 +27,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import SidebarJurnalis from "@/components/jurnalis/Sidebar"; // Sesuaikan path
+import toast from "react-hot-toast";
 
 const COLORS = {
   primary: "#FCC200",
@@ -35,111 +37,6 @@ const COLORS = {
   gray: "#C4C4C4",
 };
 
-// --- Mock Data ---
-const statsData = [
-  {
-    label: "Total Artikel",
-    val: "24",
-    icon: FileText,
-    color: "text-[#233982]",
-    bg: "bg-[#233982]/10",
-  },
-  {
-    label: "Menunggu Review",
-    val: "3",
-    icon: Clock,
-    color: "text-yellow-600",
-    bg: "bg-yellow-50",
-  },
-  {
-    label: "Diterbitkan",
-    val: "18",
-    icon: CheckCircle2,
-    color: "text-green-600",
-    bg: "bg-green-50",
-  },
-  {
-    label: "Total Views",
-    val: "14,250",
-    icon: Eye,
-    color: "text-[#4F619B]",
-    bg: "bg-[#4F619B]/10",
-  },
-];
-
-const recentArticles = [
-  {
-    id: 1,
-    title: "Dampak AI dalam Pendidikan Modern di Indonesia",
-    category: "Teknologi",
-    status: "Published",
-    date: "25 Okt 2024",
-    views: 1250,
-  },
-  {
-    id: 2,
-    title: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
-    category: "Pendidikan",
-    status: "Review",
-    date: "27 Okt 2024",
-    views: 0,
-  },
-  {
-    id: 3,
-    title: "Eksplorasi Budaya: Festival Seni Pelajar",
-    category: "Budaya",
-    status: "Revision",
-    date: "28 Okt 2024",
-    views: 0,
-  },
-  {
-    id: 4,
-    title: "Pemanasan Global: Fakta vs Mitos",
-    category: "Sains",
-    status: "Draft",
-    date: "29 Okt 2024",
-    views: 0,
-  },
-];
-
-const notifications = [
-  {
-    id: 1,
-    type: "warning",
-    title: "Perlu Revisi",
-    message:
-      "Admin meminta penambahan sumber referensi pada artikel 'Eksplorasi Budaya'.",
-    date: "2 Jam lalu",
-    article: "Eksplorasi Budaya...",
-  },
-  {
-    id: 2,
-    type: "success",
-    title: "Artikel Diterbitkan",
-    message:
-      "Artikel 'Dampak AI dalam Pendidikan' telah tayang di halaman utama.",
-    date: "1 Hari lalu",
-    article: "Dampak AI...",
-  },
-  {
-    id: 3,
-    type: "info",
-    title: "Feedback Admin",
-    message:
-      "Judul artikel 'Pemanasan Global' sudah bagus, silakan lanjutkan ke tahap submit.",
-    date: "2 Hari lalu",
-    article: "Pemanasan Global...",
-  },
-];
-
-const chartData = [
-  { name: "Artikel 1", views: 1250 },
-  { name: "Artikel 2", views: 980 },
-  { name: "Artikel 3", views: 850 },
-  { name: "Artikel 4", views: 620 },
-  { name: "Artikel 5", views: 410 },
-];
-
 // --- Komponen Badge Status ---
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -147,22 +44,27 @@ const StatusBadge = ({ status }: { status: string }) => {
     Review: "bg-yellow-50 text-yellow-700 border-yellow-100",
     Revision: "bg-red-50 text-red-700 border-red-100",
     Draft: "bg-gray-100 text-gray-600 border-gray-200",
+    Rejected: "bg-red-50 text-red-700 border-red-100",
   };
   const labels: Record<string, string> = {
     Published: "Diterbitkan",
     Review: "Menunggu Review",
     Revision: "Perlu Revisi",
     Draft: "Draft",
+    Rejected: "Ditolak",
   };
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${styles[status]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${
+        styles[status] || styles.Draft
+      }`}
     >
-      {labels[status]}
+      {labels[status] || status}
     </span>
   );
 };
+
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: 2,
@@ -170,6 +72,29 @@ const formatNumber = (value: number) =>
 
 export default function JurnalisDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch data dashboard jurnalis dari API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("/api/jurnalis/dashboard");
+        const result = await res.json();
+        if (result.success) {
+          setDashboardData(result.data);
+        } else {
+          toast.error("Gagal memuat data dashboard");
+        }
+      } catch (error) {
+        console.error("Gagal memuat data dashboard", error);
+        toast.error("Gagal memuat data dashboard");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -187,6 +112,47 @@ export default function JurnalisDashboard() {
     }
     return null;
   };
+
+  if (isLoading || !dashboardData) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
+
+  const { stats, recentArticles, notifications, chartData } = dashboardData;
+
+  const statsData = [
+    {
+      label: "Total Artikel",
+      val: stats.totalArticles.toString(),
+      icon: FileText,
+      color: "text-[#233982]",
+      bg: "bg-[#233982]/10",
+    },
+    {
+      label: "Menunggu Review",
+      val: stats.pendingReview.toString(),
+      icon: Clock,
+      color: "text-yellow-600",
+      bg: "bg-yellow-50",
+    },
+    {
+      label: "Diterbitkan",
+      val: stats.published.toString(),
+      icon: CheckCircle2,
+      color: "text-green-600",
+      bg: "bg-green-50",
+    },
+    {
+      label: "Total Views",
+      val: formatNumber(stats.totalViews),
+      icon: Eye,
+      color: "text-[#4F619B]",
+      bg: "bg-[#4F619B]/10",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
@@ -210,7 +176,10 @@ export default function JurnalisDashboard() {
               Kelola karya dan pantau performa artikel Anda
             </p>
           </div>
-          <button className="px-5 py-2.5 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20">
+          <button
+            onClick={() => (window.location.href = "/jurnalis/tulis-artikel")}
+            className="px-5 py-2.5 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20"
+          >
             <Plus size={16} />
             Tulis Artikel Baru
           </button>
@@ -261,7 +230,12 @@ export default function JurnalisDashboard() {
                     Pantau status dan performa tulisan Anda
                   </p>
                 </div>
-                <button className="text-xs font-bold text-[#233982] hover:underline">
+                <button
+                  onClick={() =>
+                    (window.location.href = "/jurnalis/artikel-saya")
+                  }
+                  className="text-xs font-bold text-[#233982] hover:underline"
+                >
                   Lihat Semua
                 </button>
               </div>
@@ -277,48 +251,62 @@ export default function JurnalisDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {recentArticles.map((article) => (
-                      <tr
-                        key={article.id}
-                        className="group hover:bg-[#FCC200]/[0.03] transition-colors"
-                      >
-                        <td className="px-4 py-4">
-                          <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1 group-hover:text-[#233982] transition-colors">
-                            {article.title}
-                          </p>
-                          <p className="text-[11px] text-[#C4C4C4] mt-0.5">
-                            {article.category} • {article.date}
-                          </p>
-                        </td>
-                        <td className="px-4 py-4">
-                          <StatusBadge status={article.status} />
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1B1B1B]">
-                            <Eye size={14} className="text-[#4F619B]" />
-                            {article.views > 0
-                              ? formatNumber(article.views)
-                              : "-"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              className="p-2 text-[#4F619B] hover:bg-[#4F619B]/10 rounded-lg transition-all"
-                              title="Edit"
-                            >
-                              <Edit3 size={16} />
-                            </button>
-                            <button
-                              className="p-2 text-[#233982] hover:bg-[#233982]/10 rounded-lg transition-all"
-                              title="Preview"
-                            >
-                              <MoreHorizontal size={16} />
-                            </button>
-                          </div>
+                    {recentArticles.length > 0 ? (
+                      recentArticles.map((article: any) => (
+                        <tr
+                          key={article.id}
+                          className="group hover:bg-[#FCC200]/[0.03] transition-colors"
+                        >
+                          <td className="px-4 py-4">
+                            <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1 group-hover:text-[#233982] transition-colors">
+                              {article.title}
+                            </p>
+                            <p className="text-[11px] text-[#C4C4C4] mt-0.5">
+                              {article.category} • {article.date}
+                            </p>
+                          </td>
+                          <td className="px-4 py-4">
+                            <StatusBadge status={article.status} />
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1B1B1B]">
+                              <Eye size={14} className="text-[#4F619B]" />
+                              {article.views > 0
+                                ? formatNumber(article.views)
+                                : "-"}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                className="p-2 text-[#4F619B] hover:bg-[#4F619B]/10 rounded-lg transition-all"
+                                title="Edit"
+                                onClick={() =>
+                                  (window.location.href = `/jurnalis/tulis-artikel?edit=${article.id}`)
+                                }
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                              <button
+                                className="p-2 text-[#233982] hover:bg-[#233982]/10 rounded-lg transition-all"
+                                title="Preview"
+                              >
+                                <MoreHorizontal size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-4 py-8 text-center text-gray-400 text-sm"
+                        >
+                          Belum ada artikel yang dibuat.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -338,62 +326,68 @@ export default function JurnalisDashboard() {
               </div>
 
               <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
-                {notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`p-4 rounded-xl border transition-all hover:shadow-md ${
-                      notif.type === "warning"
-                        ? "bg-red-50/50 border-red-100"
-                        : notif.type === "success"
-                          ? "bg-green-50/50 border-green-100"
-                          : "bg-blue-50/30 border-blue-100"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-0.5 flex-shrink-0 ${
-                          notif.type === "warning"
-                            ? "text-red-500"
-                            : notif.type === "success"
-                              ? "text-green-500"
-                              : "text-blue-500"
-                        }`}
-                      >
-                        {notif.type === "warning" ? (
-                          <AlertCircle size={18} />
-                        ) : notif.type === "success" ? (
-                          <CheckCircle2 size={18} />
-                        ) : (
-                          <MessageSquare size={18} />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <p
-                            className={`text-xs font-bold uppercase tracking-wide ${
-                              notif.type === "warning"
-                                ? "text-red-600"
-                                : notif.type === "success"
-                                  ? "text-green-600"
-                                  : "text-blue-600"
-                            }`}
-                          >
-                            {notif.title}
-                          </p>
-                          <span className="text-[10px] text-[#C4C4C4] whitespace-nowrap">
-                            {notif.date}
-                          </span>
+                {notifications.length > 0 ? (
+                  notifications.map((notif: any) => (
+                    <div
+                      key={notif.id}
+                      className={`p-4 rounded-xl border transition-all hover:shadow-md ${
+                        notif.type === "warning"
+                          ? "bg-red-50/50 border-red-100"
+                          : notif.type === "success"
+                            ? "bg-green-50/50 border-green-100"
+                            : "bg-blue-50/30 border-blue-100"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-0.5 flex-shrink-0 ${
+                            notif.type === "warning"
+                              ? "text-red-500"
+                              : notif.type === "success"
+                                ? "text-green-500"
+                                : "text-blue-500"
+                          }`}
+                        >
+                          {notif.type === "warning" ? (
+                            <AlertCircle size={18} />
+                          ) : notif.type === "success" ? (
+                            <CheckCircle2 size={18} />
+                          ) : (
+                            <MessageSquare size={18} />
+                          )}
                         </div>
-                        <p className="text-xs text-[#1B1B1B]/80 leading-relaxed mb-2">
-                          {notif.message}
-                        </p>
-                        <p className="text-[10px] font-semibold text-[#4F619B] bg-[#4F619B]/10 inline-block px-2 py-0.5 rounded">
-                          {notif.article}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <p
+                              className={`text-xs font-bold uppercase tracking-wide ${
+                                notif.type === "warning"
+                                  ? "text-red-600"
+                                  : notif.type === "success"
+                                    ? "text-green-600"
+                                    : "text-blue-600"
+                              }`}
+                            >
+                              {notif.title}
+                            </p>
+                            <span className="text-[10px] text-[#C4C4C4] whitespace-nowrap">
+                              {notif.date}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#1B1B1B]/80 leading-relaxed mb-2">
+                            {notif.message}
+                          </p>
+                          <p className="text-[10px] font-semibold text-[#4F619B] bg-[#4F619B]/10 inline-block px-2 py-0.5 rounded">
+                            {notif.article}
+                          </p>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-400 text-sm">
+                    Tidak ada notifikasi baru.
                   </div>
-                ))}
+                )}
               </div>
             </motion.div>
           </div>
@@ -411,12 +405,12 @@ export default function JurnalisDashboard() {
                   Performa Artikel Terpopuler
                 </h3>
                 <p className="text-xs text-[#C4C4C4]">
-                  Total views pada 5 artikel terbaik Anda bulan ini
+                  Total views pada 5 artikel terbaik Anda
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-[#4F619B] bg-[#4F619B]/10 px-3 py-1.5 rounded-lg">
                 <TrendingUp size={14} />
-                <span>+12% dari bulan lalu</span>
+                <span>Real-time data</span>
               </div>
             </div>
             <div className="h-[250px] w-full">

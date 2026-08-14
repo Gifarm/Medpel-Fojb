@@ -213,3 +213,35 @@ export async function POST(request: Request) {
     );
   }
 }
+// ... (kode GET, POST, dan PATCH yang sudah ada tetap dipertahankan di atas) ...
+
+// DELETE: Hapus user secara permanen
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID pengguna diperlukan" },
+        { status: 400 },
+      );
+    }
+
+    // Hapus user dari database
+    await prisma.user.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Pengguna berhasil dihapus",
+    });
+  } catch (error) {
+    console.error("DELETE User Error:", error);
+    return NextResponse.json(
+      { error: "Gagal menghapus pengguna" },
+      { status: 500 },
+    );
+  }
+}
