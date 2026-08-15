@@ -1,8 +1,9 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   FileText,
@@ -11,75 +12,20 @@ import {
   Eye,
   Plus,
   Filter,
-  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   CheckCircle2,
   AlertCircle,
   XCircle,
+  Loader2,
+  AlertTriangle,
+  X,
 } from "lucide-react";
-import SidebarJurnalis from "@/components/jurnalis/Sidebar"; // Sesuaikan path
+import SidebarJurnalis from "@/components/jurnalis/Sidebar";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
-const COLORS = {
-  primary: "#FCC200",
-  blueDark: "#233982",
-  blue: "#4F619B",
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-};
-
-// --- Mock Data Artikel ---
-const mockArticles = [
-  {
-    id: 1,
-    title: "Dampak AI dalam Pendidikan Modern di Indonesia",
-    category: "Teknologi",
-    status: "Published",
-    date: "25 Okt 2024",
-    views: 1250,
-  },
-  {
-    id: 2,
-    title: "Tips Sukses Menghadapi Olimpiade Sains Nasional",
-    category: "Pendidikan",
-    status: "Review",
-    date: "27 Okt 2024",
-    views: 0,
-  },
-  {
-    id: 3,
-    title: "Eksplorasi Budaya: Festival Seni Pelajar Jawa Barat",
-    category: "Budaya",
-    status: "Revision",
-    date: "28 Okt 2024",
-    views: 0,
-  },
-  {
-    id: 4,
-    title: "Pemanasan Global: Fakta vs Mitos di Kalangan Pelajar",
-    category: "Sains",
-    status: "Draft",
-    date: "29 Okt 2024",
-    views: 0,
-  },
-  {
-    id: 5,
-    title: "Review Film: Perjuangan Pelajar di Daerah Terpencil",
-    category: "Hiburan",
-    status: "Published",
-    date: "20 Okt 2024",
-    views: 840,
-  },
-  {
-    id: 6,
-    title: "Panduan Lengkap Beasiswa Kuliah 2024",
-    category: "Pendidikan",
-    status: "Rejected",
-    date: "15 Okt 2024",
-    views: 0,
-  },
-];
-
-// --- Komponen Badge Status ---
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     Published: "bg-green-50 text-green-700 border-green-100",
@@ -88,7 +34,6 @@ const StatusBadge = ({ status }: { status: string }) => {
     Draft: "bg-gray-100 text-gray-600 border-gray-200",
     Rejected: "bg-gray-100 text-gray-500 border-gray-200",
   };
-
   const icons: Record<string, any> = {
     Published: CheckCircle2,
     Review: Clock,
@@ -96,7 +41,6 @@ const StatusBadge = ({ status }: { status: string }) => {
     Draft: FileText,
     Rejected: XCircle,
   };
-
   const labels: Record<string, string> = {
     Published: "Diterbitkan",
     Review: "Menunggu Review",
@@ -104,7 +48,6 @@ const StatusBadge = ({ status }: { status: string }) => {
     Draft: "Draft",
     Rejected: "Ditolak",
   };
-
   const Icon = icons[status] || FileText;
 
   return (
@@ -118,35 +61,137 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function ArtikelSayaPage() {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // State Filter & Pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  // Filter Data
-  const filteredArticles = useMemo(() => {
-    return mockArticles.filter((article) => {
-      const matchesSearch = article.title
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const matchesStatus =
-        statusFilter === "All" || article.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+  // State Data
+  const [articles, setArticles] = useState<any[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // State Modals
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [previewArticle, setPreviewArticle] = useState<any>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  // Fetch Data
+  // Fetch Data dari API
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        search: searchQuery,
+        status: statusFilter,
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      // Tambahkan console.log ini sementara untuk debugging jika masih error
+      console.log(
+        "Fetching URL:",
+        `/api/jurnalis/articles?${params.toString()}`,
+      );
+
+      const res = await fetch(`/api/jurnalis/articles?${params.toString()}`);
+      const result = await res.json();
+
+      if (result.success) {
+        setArticles(result.data);
+        setTotalPages(result.pagination.totalPages);
+      } else {
+        toast.error(result.error || "Gagal memuat data artikel");
+      }
+    } catch (error) {
+      console.error("Gagal memuat data artikel", error);
+      toast.error("Gagal memuat data artikel");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // PERBAIKAN 2: Pisahkan useEffect agar tidak infinite loop
+  // 1. Reset halaman ke 1 HANYA ketika search atau filter berubah
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchQuery, statusFilter]);
+
+  // 2. Fetch data ketika search, filter, ATAU halaman berubah
+  useEffect(() => {
+    const timer = setTimeout(fetchData, 200); // Debounce 200ms
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter, currentPage]);
+
+  // Fetch detail artikel untuk Preview Modal
+  const handleOpenPreview = async (id: string) => {
+    setIsLoadingPreview(true);
+    setPreviewArticle(null);
+    try {
+      const res = await fetch(`/api/jurnalis/articles?id=${id}`);
+      const result = await res.json();
+      if (result.success) {
+        setPreviewArticle(result.data);
+      } else {
+        toast.error("Gagal memuat detail artikel");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan saat memuat preview");
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  const openDeleteModal = (article: any) => {
+    setArticleToDelete(article);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setArticleToDelete(null);
+  };
+
+  const handleDelete = async () => {
+    if (!articleToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(
+        `/api/jurnalis/articles?id=${articleToDelete.id}`,
+        { method: "DELETE" },
+      );
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Artikel berhasil dihapus!");
+        closeDeleteModal();
+        fetchData();
+      } else {
+        toast.error(result.error || "Gagal menghapus artikel");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
-      {/* --- SIDEBAR --- */}
       <SidebarJurnalis
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
 
-      {/* --- MAIN CONTENT --- */}
       <main
         className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
       >
-        {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#1B1B1B]">Artikel Saya</h2>
@@ -154,14 +199,16 @@ export default function ArtikelSayaPage() {
               Kelola, pantau status, dan edit semua karya Anda
             </p>
           </div>
-          <button className="px-5 py-2.5 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20">
-            <Plus size={16} />
-            Tulis Artikel Baru
+          <button
+            onClick={() => router.push("/jurnalis/tulis-artikel")}
+            className="px-5 py-2.5 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20"
+          >
+            <Plus size={16} /> Tulis Artikel Baru
           </button>
         </header>
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
-          {/* 1. Filter & Search Bar */}
+          {/* Filter & Search Bar */}
           <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="relative w-full md:w-96">
               <Search
@@ -176,7 +223,6 @@ export default function ArtikelSayaPage() {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-[#FCC200]/20 focus:border-[#FCC200] transition-all outline-none"
               />
             </div>
-
             <div className="flex items-center gap-3 w-full md:w-auto">
               <div className="relative flex-1 md:flex-none">
                 <select
@@ -191,19 +237,15 @@ export default function ArtikelSayaPage() {
                   <option value="Draft">Draft</option>
                   <option value="Rejected">Ditolak</option>
                 </select>
-                <ChevronDown
+                <Filter
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#C4C4C4] pointer-events-none"
                   size={16}
                 />
               </div>
-
-              <button className="p-2.5 text-[#C4C4C4] hover:bg-gray-100 rounded-xl transition-colors border border-gray-200">
-                <Filter size={18} />
-              </button>
             </div>
           </div>
 
-          {/* 2. Data Table */}
+          {/* Data Table */}
           <div className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
@@ -217,8 +259,14 @@ export default function ArtikelSayaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredArticles.length > 0 ? (
-                    filteredArticles.map((article) => (
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#233982] mx-auto"></div>
+                      </td>
+                    </tr>
+                  ) : articles.length > 0 ? (
+                    articles.map((article) => (
                       <motion.tr
                         key={article.id}
                         initial={{ opacity: 0 }}
@@ -254,21 +302,27 @@ export default function ArtikelSayaPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              onClick={() => handleOpenPreview(article.id)}
                               className="p-2 text-[#4F619B] hover:bg-[#4F619B]/10 rounded-lg transition-all"
                               title="Preview"
                             >
                               <Eye size={18} />
                             </button>
                             <button
+                              onClick={() =>
+                                router.push(
+                                  `/jurnalis/tulis-artikel?edit=${article.id}`,
+                                )
+                              }
                               className="p-2 text-[#233982] hover:bg-[#233982]/10 rounded-lg transition-all"
                               title="Edit"
                             >
                               <Edit3 size={18} />
                             </button>
-                            {/* Tombol Hapus hanya muncul untuk Draft atau Ditolak */}
                             {(article.status === "Draft" ||
                               article.status === "Rejected") && (
                               <button
+                                onClick={() => openDeleteModal(article)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                 title="Hapus"
                               >
@@ -298,30 +352,207 @@ export default function ArtikelSayaPage() {
               </table>
             </div>
 
-            {/* Pagination (Dummy) */}
+            {/* Pagination Controls */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-[#C4C4C4]">
-                Menampilkan {filteredArticles.length} dari {mockArticles.length}{" "}
-                artikel
+                Menampilkan halaman {currentPage} dari {totalPages}
               </p>
               <div className="flex items-center gap-2">
                 <button
-                  className="px-3 py-1.5 text-xs font-bold text-[#C4C4C4] border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                  disabled
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1 || isLoading}
+                  className="p-2 text-[#C4C4C4] hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Sebelumnya
+                  <ChevronLeft size={18} />
                 </button>
-                <button className="px-3 py-1.5 text-xs font-bold text-[#233982] bg-[#233982]/10 border border-[#233982]/20 rounded-lg">
-                  1
-                </button>
-                <button className="px-3 py-1.5 text-xs font-bold text-[#C4C4C4] border border-gray-200 rounded-lg hover:bg-gray-50">
-                  Selanjutnya
+                <span className="text-xs font-bold text-[#1B1B1B] px-2">
+                  {currentPage} / {totalPages || 1}
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={
+                    currentPage === totalPages || totalPages === 0 || isLoading
+                  }
+                  className="p-2 text-[#C4C4C4] hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {/* --- MODAL PREVIEW ARTIKEL --- */}
+      <AnimatePresence>
+        {previewArticle && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-8"
+            onClick={() => setPreviewArticle(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-[#233982]/10 text-[#233982] rounded-lg flex items-center justify-center">
+                    <Eye size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1B1B1B]">
+                      Preview Artikel
+                    </h3>
+                    <p className="text-[10px] text-[#C4C4C4]">
+                      Status: {previewArticle.status}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPreviewArticle(null)}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-colors text-[#C4C4C4] hover:text-[#1B1B1B]"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 md:p-12 overflow-y-auto flex-1 bg-white">
+                {isLoadingPreview ? (
+                  <div className="flex items-center justify-center h-64">
+                    <Loader2
+                      className="animate-spin text-[#233982]"
+                      size={32}
+                    />
+                  </div>
+                ) : (
+                  <div className="max-w-3xl mx-auto">
+                    {previewArticle.coverImage && (
+                      <div className="w-full h-64 md:h-80 rounded-2xl overflow-hidden mb-8 shadow-lg">
+                        <img
+                          src={previewArticle.coverImage}
+                          alt="Cover"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="px-3 py-1 bg-[#233982]/10 text-[#233982] text-xs font-bold rounded-full">
+                        {previewArticle.categoryName || "Umum"}
+                      </span>
+                      {previewArticle.tags?.length > 0 && (
+                        <div className="flex gap-2">
+                          {previewArticle.tags
+                            .slice(0, 3)
+                            .map((tag: string) => (
+                              <span
+                                key={tag}
+                                className="text-xs text-[#C4C4C4] font-medium"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                    <h1 className="text-3xl md:text-4xl font-black text-[#1B1B1B] leading-tight mb-6">
+                      {previewArticle.title}
+                    </h1>
+                    <div
+                      className="prose prose-lg max-w-none text-[#1B1B1B]/80 leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html:
+                          previewArticle.content ||
+                          "<p class='text-gray-400'>Tidak ada konten.</p>",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- MODAL KONFIRMASI HAPUS (Tetap sama seperti sebelumnya) --- */}
+      <AnimatePresence>
+        {isDeleteModalOpen && articleToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeDeleteModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-gray-100 bg-red-50/50 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[#1B1B1B]">
+                    Hapus Artikel?
+                  </h3>
+                  <p className="text-xs text-[#C4C4C4] mt-1">
+                    Tindakan ini tidak dapat dibatalkan
+                  </p>
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-[#1B1B1B] mb-4">
+                  Anda yakin ingin menghapus artikel{" "}
+                  <span className="font-bold text-[#233982]">
+                    {articleToDelete.title}
+                  </span>{" "}
+                  secara permanen?
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <p className="text-xs text-yellow-800">
+                    <span className="font-bold">Perhatian:</span> Artikel yang
+                    dihapus tidak dapat dikembalikan.
+                  </p>
+                </div>
+              </div>
+              <div className="px-6 py-5 border-t border-gray-100 bg-gray-50/50 flex items-center justify-end gap-3">
+                <button
+                  onClick={closeDeleteModal}
+                  className="px-5 py-2.5 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] transition-colors"
+                  disabled={isDeleting}
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="px-5 py-2.5 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-md shadow-red-600/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                  Ya, Hapus Artikel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

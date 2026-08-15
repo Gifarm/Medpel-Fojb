@@ -1,61 +1,70 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET: Ambil daftar artikel dengan filter
-export async function GET(request: Request) {
+// GET: Ambil daftar artikel dengan filter, search, dan pagination
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "All";
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
     const where: any = {};
 
-    if (search) {
+    // PERBAIKAN 1: Hapus mode: "insensitive" untuk MySQL
+    if (search && search.trim() !== "") {
       where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { author: { name: { contains: search, mode: "insensitive" } } },
+        { title: { contains: search.trim() } },
+        { author: { name: { contains: search.trim() } } },
       ];
     }
 
     if (status !== "All") {
-      // Map status frontend ke enum database
       const statusMap: Record<string, string> = {
         Pending: "PENDING_REVIEW",
         "Needs Revision": "NEEDS_REVISION",
         Approved: "PUBLISHED",
         Rejected: "REJECTED",
+        Draft: "DRAFT",
       };
       where.status = statusMap[status] || status;
     }
 
-    const articles = await prisma.article.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        excerpt: true,
-        content: true,
-        status: true,
-        createdAt: true,
-        author: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          excerpt: true,
+          content: true,
+          coverImage: true, // PERBAIKAN 2: Tambahkan coverImage
+          status: true,
+          createdAt: true,
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+          category: {
+            select: {
+              name: true,
+            },
           },
         },
-        category: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.article.count({ where }),
+    ]);
 
-    // Map status database ke format frontend
     const statusMap: Record<string, string> = {
       DRAFT: "Draft",
       PENDING_REVIEW: "Pending",
@@ -69,6 +78,7 @@ export async function GET(request: Request) {
       title: article.title,
       excerpt: article.excerpt || "",
       content: article.content,
+      coverImage: article.coverImage || null, // PERBAIKAN 3: Return coverImage
       author: article.author.name,
       authorRole:
         article.author.role === "JURNALIS" ? "Jurnalis" : article.author.role,
@@ -82,23 +92,32 @@ export async function GET(request: Request) {
       status: statusMap[article.status] || article.status,
     }));
 
-    return NextResponse.json({ success: true, data: formattedArticles });
+    return NextResponse.json({
+      success: true,
+      data: formattedArticles,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error("GET Articles Error:", error);
     return NextResponse.json(
-      { error: "Gagal mengambil data artikel" },
+      {
+        error: "Gagal mengambil data artikel",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 },
     );
   }
 }
-
-// PATCH: Update status artikel (Approve, Reject, Revisi)
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     const { id, status, revisionNote } = body;
 
-    // Map status frontend ke enum database
     const statusMap: Record<string, string> = {
       Pending: "PENDING_REVIEW",
       "Needs Revision": "NEEDS_REVISION",
@@ -114,22 +133,58 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // 1. Ambil data artikel untuk mendapatkan authorId dan judul
+    const article = await prisma.article.findUnique({
+      where: { id },
+      select: { authorId: true, title: true },
+    });
+
+    if (!article) {
+      return NextResponse.json(
+        { error: "Artikel tidak ditemukan" },
+        { status: 404 },
+      );
+    }
+
+    // 2. Update status artikel
     await prisma.article.update({
       where: { id },
       data: { status: dbStatus as any },
     });
 
-    // TODO: Jika status "Needs Revision", kirim notifikasi ke jurnalis
-    // if (status === "Needs Revision" && revisionNote) {
-    //   await prisma.notification.create({
-    //     data: {
-    //       userId: article.authorId,
-    //       type: "revision",
-    //       message: revisionNote,
-    //       articleId: id,
-    //     },
-    //   });
-    // }
+    // 3. Buat Notifikasi untuk Jurnalis (jika status berubah ke Publish, Reject, atau Revisi)
+    let notifType = "";
+    let notifTitle = "";
+    let notifMessage = "";
+
+    if (dbStatus === "PUBLISHED") {
+      notifType = "success";
+      notifTitle = "Artikel Disetujui & Diterbitkan";
+      notifMessage = `Selamat! Artikel "${article.title}" telah disetujui dan tayang di Media Pelajar.`;
+    } else if (dbStatus === "REJECTED") {
+      notifType = "revision";
+      notifTitle = "Artikel Ditolak";
+      notifMessage = `Maaf, artikel "${article.title}" ditolak oleh admin. Silakan perbaiki dan kirim ulang.`;
+    } else if (dbStatus === "NEEDS_REVISION") {
+      notifType = "revision";
+      notifTitle = "Perlu Tindakan: Revisi";
+      notifMessage =
+        revisionNote ||
+        `Admin meminta revisi pada artikel "${article.title}". Silakan cek dan perbaiki.`;
+    }
+
+    if (notifType) {
+      await prisma.notification.create({
+        data: {
+          userId: article.authorId,
+          articleId: id,
+          type: notifType,
+          title: notifTitle,
+          message: notifMessage,
+          isRead: false,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

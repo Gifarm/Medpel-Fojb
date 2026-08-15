@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
@@ -13,63 +14,10 @@ import {
   Trash2,
   Clock,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
-import SidebarJurnalis from "@/components/jurnalis/Sidebar"; // Sesuaikan path
+import SidebarJurnalis from "@/components/jurnalis/Sidebar";
 import toast from "react-hot-toast";
-
-// --- Mock Data Notifikasi ---
-const initialNotifications = [
-  {
-    id: 1,
-    type: "revision",
-    title: "Artikel Memerlukan Revisi",
-    message:
-      "Admin meminta Anda menambahkan sumber referensi pada paragraf ke-2 dan memperbaiki typo pada judul.",
-    articleTitle: "Eksplorasi Budaya: Festival Seni Pelajar",
-    date: "2 Jam lalu",
-    isRead: false,
-  },
-  {
-    id: 2,
-    type: "success",
-    title: "Artikel Berhasil Diterbitkan",
-    message:
-      "Selamat! Artikel Anda telah disetujui dan tayang di halaman utama Media Pelajar.",
-    articleTitle: "Dampak AI dalam Pendidikan Modern",
-    date: "1 Hari lalu",
-    isRead: true,
-  },
-  {
-    id: 3,
-    type: "revision",
-    title: "Perlu Tindakan: Revisi Minor",
-    message:
-      "Mohon ganti gambar cover karena resolusi terlalu rendah (minimal 1200x630px).",
-    articleTitle: "Pemanasan Global: Fakta vs Mitos",
-    date: "2 Hari lalu",
-    isRead: false,
-  },
-  {
-    id: 4,
-    type: "info",
-    title: "Feedback dari Editor",
-    message:
-      "Judul artikel sudah sangat menarik (catchy). Silakan langsung submit ke tahap review.",
-    articleTitle: "Tips Sukses Menghadapi OSN",
-    date: "3 Hari lalu",
-    isRead: true,
-  },
-  {
-    id: 5,
-    type: "info",
-    title: "Selamat Datang di Media Pelajar!",
-    message:
-      "Akun Jurnalis Anda telah aktif. Mulai tulis artikel pertamamu dan bagikan idemu ke pelajar Indonesia.",
-    articleTitle: null,
-    date: "1 Minggu lalu",
-    isRead: true,
-  },
-];
 
 // --- Komponen Ikon Berdasarkan Tipe ---
 const TypeIcon = ({ type }: { type: string }) => {
@@ -89,56 +37,110 @@ const TypeBg = ({ type }: { type: string }) => {
 export default function NotifikasiPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("Semua");
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
-  // Filter Notifikasi
-  const filteredNotifications = notifications.filter((notif) => {
-    if (activeTab === "Belum Dibaca") return !notif.isRead;
-    if (activeTab === "Perlu Tindakan")
-      return notif.type === "revision" && !notif.isRead;
-    return true;
-  });
+  // Fetch Notifikasi dari API
+  const fetchNotifications = async () => {
+    setIsLoading(true);
+    try {
+      const filterMap: Record<string, string> = {
+        Semua: "all",
+        "Belum Dibaca": "unread",
+        "Perlu Tindakan": "action_required",
+      };
 
+      const res = await fetch(
+        `/api/jurnalis/notifications?filter=${filterMap[activeTab]}`,
+      );
+      const result = await res.json();
+      if (result.success) {
+        setNotifications(result.data);
+      }
+    } catch (error) {
+      console.error("Gagal memuat notifikasi", error);
+      toast.error("Gagal memuat notifikasi");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [activeTab]);
+
+  // Hitung jumlah untuk badge tab
   const unreadCount = notifications.filter((n) => !n.isRead).length;
-  const actionRequiredCount = notifications.filter(
-    (n) => n.type === "revision" && !n.isRead,
-  ).length;
+  // Untuk "Perlu Tindakan", kita asumsikan semua yang belum dibaca di tab ini adalah action required
 
   // Handler Tandai Dibaca
-  const markAsRead = (id: number) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch("/api/jurnalis/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      // Update UI secara optimistik
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      );
+    } catch (error) {
+      toast.error("Gagal menandai sebagai dibaca");
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
-    toast.success("Semua notifikasi ditandai sudah dibaca");
+  const markAllAsRead = async () => {
+    setIsActionLoading(true);
+    try {
+      await fetch("/api/jurnalis/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      toast.success("Semua notifikasi ditandai sudah dibaca");
+    } catch (error) {
+      toast.error("Gagal memperbarui notifikasi");
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
-  const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter((n) => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      await fetch(`/api/jurnalis/notifications?id=${id}`, { method: "DELETE" });
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      toast.success("Notifikasi dihapus");
+    } catch (error) {
+      toast.error("Gagal menghapus notifikasi");
+    }
   };
 
   const tabs = [
     { name: "Semua", count: notifications.length },
-    { name: "Belum Dibaca", count: unreadCount },
-    { name: "Perlu Tindakan", count: actionRequiredCount },
+    {
+      name: "Belum Dibaca",
+      count: notifications.filter((n) => !n.isRead).length,
+    },
+    {
+      name: "Perlu Tindakan",
+      count: notifications.filter((n) => n.type === "revision" && !n.isRead)
+        .length,
+    },
   ];
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
-      {/* --- SIDEBAR --- */}
       <SidebarJurnalis
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
 
-      {/* --- MAIN CONTENT --- */}
       <main
         className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
       >
-        {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#1B1B1B]">Notifikasi</h2>
@@ -149,15 +151,21 @@ export default function NotifikasiPage() {
           {unreadCount > 0 && (
             <button
               onClick={markAllAsRead}
-              className="px-4 py-2 bg-white border border-gray-200 text-[#1B1B1B] text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-gray-50 transition-all"
+              disabled={isActionLoading}
+              className="px-4 py-2 bg-white border border-gray-200 text-[#1B1B1B] text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-gray-50 transition-all disabled:opacity-50"
             >
-              <CheckCheck size={16} /> Tandai Semua Dibaca
+              {isActionLoading ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <CheckCheck size={16} />
+              )}
+              Tandai Semua Dibaca
             </button>
           )}
         </header>
 
         <div className="p-8 max-w-[1000px] mx-auto space-y-8">
-          {/* 1. Tabs Filter */}
+          {/* Tabs Filter */}
           <div className="flex items-center gap-2 border-b border-gray-200 pb-1 overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -193,38 +201,39 @@ export default function NotifikasiPage() {
             ))}
           </div>
 
-          {/* 2. Notification List */}
+          {/* Notification List */}
           <div className="space-y-3">
             <AnimatePresence mode="popLayout">
-              {filteredNotifications.length > 0 ? (
-                filteredNotifications.map((notif) => (
+              {isLoading ? (
+                <div className="flex justify-center py-20">
+                  <Loader2 className="animate-spin text-[#233982]" size={32} />
+                </div>
+              ) : notifications.length > 0 ? (
+                notifications.map((notif) => (
                   <motion.div
                     key={notif.id}
                     layout
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    onClick={() => markAsRead(notif.id)}
+                    onClick={() => !notif.isRead && markAsRead(notif.id)}
                     className={`group relative bg-[#FFFFFF] rounded-2xl border transition-all cursor-pointer overflow-hidden ${
                       notif.isRead
                         ? "border-gray-100 opacity-80 hover:opacity-100"
                         : "border-[#FCC200]/30 shadow-sm hover:shadow-md"
                     }`}
                   >
-                    {/* Unread Indicator Line */}
                     {!notif.isRead && (
                       <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FCC200]" />
                     )}
 
                     <div className="p-5 flex items-start gap-4">
-                      {/* Icon Box */}
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border ${TypeBg({ type: notif.type })}`}
                       >
                         <TypeIcon type={notif.type} />
                       </div>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0 pt-0.5">
                         <div className="flex items-center justify-between mb-1">
                           <h3
@@ -242,7 +251,6 @@ export default function NotifikasiPage() {
                           {notif.message}
                         </p>
 
-                        {/* Article Context Badge */}
                         {notif.articleTitle && (
                           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg group-hover:bg-[#233982]/5 group-hover:border-[#233982]/10 transition-colors">
                             <FileText size={12} className="text-[#4F619B]" />
@@ -257,7 +265,6 @@ export default function NotifikasiPage() {
                         )}
                       </div>
 
-                      {/* Actions (Visible on Hover) */}
                       <div className="flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {!notif.isRead && (
                           <button

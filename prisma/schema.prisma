@@ -27,6 +27,7 @@ enum CommentStatus {
   REJECTED
   HIDDEN
 }
+// ... (enum dan model sebelumnya tetap sama) ...
 
 model User {
   id          String      @id @default(cuid())
@@ -35,16 +36,64 @@ model User {
   password    String
   role        Role        @default(MEMBER)
   isVerified  Boolean     @default(false)
-  isSuspended  Boolean     @default(false) // <-- TAMBAHKAN BARIS INI
+  isSuspended Boolean     @default(false)
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   otps        Otp[]
-  articles    Article[]   // Relasi: User menulis banyak artikel
-  comments    Comment[]   // Relasi: User memberikan banyak komentar
+  articles    Article[]
+  comments    Comment[]
+  notifications Notification[] // <-- TAMBAHKAN INI
 }
 
+model Article {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?
+  content     String
+  coverImage  String?       @db.LongText
+  status      ArticleStatus @default(DRAFT)
+  views       Int           @default(0)
+  
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  
+  tags        Tag[]         @relation("ArticleTags")
+  comments    Comment[]
+  notifications Notification[] // <-- TAMBAHKAN INI
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+  @@index([authorId])
+  @@index([categoryId])
+}
+
+// <-- TAMBAHKAN MODEL BARU INI DI BAGIAN BAWAH -->
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  articleId String?  // Opsional, jika notifikasi terkait artikel spesifik
+  article   Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  
+  type      String   // "revision", "success", "info"
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
 model Otp {
   id         String   @id @default(cuid())
   email      String
@@ -77,32 +126,6 @@ model Tag {
   articles    Article[] @relation("ArticleTags")
 }
 
-model Article {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  excerpt     String?
-  content     String
-  coverImage  String?
-  status      ArticleStatus @default(DRAFT)
-  views       Int           @default(0)
-  
-  authorId    String
-  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  categoryId  String
-  category    Category      @relation(fields: [categoryId], references: [id])
-  
-  tags        Tag[]         @relation("ArticleTags")
-  comments    Comment[]
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@index([status])
-  @@index([authorId])
-  @@index([categoryId])
-}
 
 model Comment {
   id          String        @id @default(cuid())

@@ -30,13 +30,17 @@ import {
 } from "lucide-react";
 import SidebarJurnalis from "@/components/jurnalis/Sidebar";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function TulisArtikelPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit"); // Ambil ID artikel jika mode edit
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(!!editId);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const isEditorInitialized = useRef(false);
@@ -79,6 +83,41 @@ export default function TulisArtikelPage() {
     fetchCategories();
   }, []);
 
+  // Fetch Article Data jika dalam mode Edit
+  useEffect(() => {
+    const fetchArticleToEdit = async () => {
+      if (editId) {
+        try {
+          const res = await fetch(`/api/jurnalis/articles?id=${editId}`);
+          const result = await res.json();
+          if (result.success) {
+            const data = result.data;
+            setTitle(data.title);
+            setContent(data.content);
+            setCategory(data.categoryId);
+            setTags(data.tags);
+            setCoverImage(data.coverImage);
+
+            if (editorRef.current) {
+              editorRef.current.innerHTML = data.content;
+              isEditorInitialized.current = true;
+            }
+          } else {
+            toast.error(result.error || "Gagal memuat artikel");
+            router.push("/jurnalis/artikel-saya");
+          }
+        } catch (error) {
+          console.error("Error fetching article:", error);
+          toast.error("Gagal memuat artikel");
+          router.push("/jurnalis/artikel-saya");
+        } finally {
+          setIsLoadingEdit(false);
+        }
+      }
+    };
+    fetchArticleToEdit();
+  }, [editId, router]);
+
   // Update active formats saat selection berubah
   const updateActiveFormats = useCallback(() => {
     setActiveFormats({
@@ -102,20 +141,12 @@ export default function TulisArtikelPage() {
     }
   };
 
-  // Handler content change - TIDAK menggunakan dangerouslySetInnerHTML
+  // Handler content change
   const handleEditorInput = () => {
     if (editorRef.current) {
       setContent(editorRef.current.innerHTML);
     }
   };
-
-  // Set initial content hanya sekali saat mount
-  useEffect(() => {
-    if (editorRef.current && !isEditorInitialized.current && content) {
-      editorRef.current.innerHTML = content;
-      isEditorInitialized.current = true;
-    }
-  }, []);
 
   // Handler Tambah Tag
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -143,7 +174,6 @@ export default function TulisArtikelPage() {
         toast.error("Ukuran gambar maksimal 2MB!");
         return;
       }
-
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverImage(event.target?.result as string);
@@ -162,7 +192,6 @@ export default function TulisArtikelPage() {
         toast.error("Ukuran gambar maksimal 2MB!");
         return;
       }
-
       const reader = new FileReader();
       reader.onload = (event) => {
         setCoverImage(event.target?.result as string);
@@ -173,8 +202,10 @@ export default function TulisArtikelPage() {
   };
 
   // Handler Submit
+  // ... (import dan state awal tetap sama seperti sebelumnya) ...
+
+  // Handler Submit (DIPERBAIKI: Mendukung Create DAN Update)
   const handleSubmit = async (status: "DRAFT" | "PENDING_REVIEW") => {
-    // Ambil content dari editor
     const finalContent = editorRef.current?.innerHTML || content;
 
     if (!title || !finalContent || !category) {
@@ -184,8 +215,14 @@ export default function TulisArtikelPage() {
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/jurnalis/articles", {
-        method: "POST",
+      // Tentukan URL dan Method berdasarkan apakah ini mode Edit atau Baru
+      const url = editId
+        ? `/api/jurnalis/articles?id=${editId}`
+        : "/api/jurnalis/articles";
+      const method = editId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
@@ -203,20 +240,12 @@ export default function TulisArtikelPage() {
       const result = await res.json();
       if (result.success) {
         toast.success(
-          status === "DRAFT"
-            ? "Artikel berhasil disimpan sebagai Draft!"
-            : "Artikel berhasil dikirim untuk review Admin!",
+          editId
+            ? "Artikel berhasil diperbarui!"
+            : status === "DRAFT"
+              ? "Artikel berhasil disimpan sebagai Draft!"
+              : "Artikel berhasil dikirim untuk review Admin!",
         );
-
-        // Reset form
-        setTitle("");
-        setContent("");
-        setCategory("");
-        setTags([]);
-        setCoverImage(null);
-        if (editorRef.current) {
-          editorRef.current.innerHTML = "";
-        }
 
         setTimeout(() => {
           router.push("/jurnalis/artikel-saya");
@@ -233,6 +262,8 @@ export default function TulisArtikelPage() {
     }
   };
 
+  // ... (di bagian return, ubah tombol "Kirim untuk Review" menjadi dinamis) ...
+
   const wordCount =
     content.trim() === ""
       ? 0
@@ -240,6 +271,15 @@ export default function TulisArtikelPage() {
           .replace(/<[^>]*>/g, "")
           .trim()
           .split(/\s+/).length;
+
+  // Tampilkan loading jika sedang mengambil data edit
+  if (isLoadingEdit) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
@@ -253,9 +293,13 @@ export default function TulisArtikelPage() {
       >
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-[#1B1B1B]">Tulis Artikel</h2>
+            <h2 className="text-xl font-bold text-[#1B1B1B]">
+              {editId ? "Edit Artikel" : "Tulis Artikel"}
+            </h2>
             <p className="text-[11px] text-[#C4C4C4] font-semibold uppercase tracking-wider">
-              Buat karya jurnalistik berkualitas untuk pelajar Indonesia
+              {editId
+                ? "Perbarui karya jurnalistik Anda"
+                : "Buat karya jurnalistik berkualitas untuk pelajar Indonesia"}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -274,15 +318,21 @@ export default function TulisArtikelPage() {
                 <Loader2 className="animate-spin" size={16} />
               ) : (
                 <Save size={16} />
-              )}
+              )}{" "}
               Simpan Draft
             </button>
             <button
-              onClick={() => handleSubmit("PENDING_REVIEW")}
+              onClick={() =>
+                handleSubmit(editId ? "PENDING_REVIEW" : "PENDING_REVIEW")
+              }
               disabled={isSaving}
               className="px-5 py-2 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20 disabled:opacity-70"
             >
-              {isSaving ? "Mengirim..." : "Kirim untuk Review"}
+              {isSaving
+                ? "Menyimpan..."
+                : editId
+                  ? "Simpan Perubahan"
+                  : "Kirim untuk Review"}
               {!isSaving && <Send size={16} />}
             </button>
           </div>
@@ -325,15 +375,10 @@ export default function TulisArtikelPage() {
 
               {/* Editor dengan Toolbar Fungsional */}
               <div className="bg-[#FFFFFF] rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
-                {/* Toolbar */}
                 <div className="flex flex-wrap items-center gap-1 p-3 border-b border-gray-100 bg-gray-50/50">
                   <button
                     onClick={() => execCmd("bold")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.bold
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.bold ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Bold"
                     type="button"
                   >
@@ -341,11 +386,7 @@ export default function TulisArtikelPage() {
                   </button>
                   <button
                     onClick={() => execCmd("italic")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.italic
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.italic ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Italic"
                     type="button"
                   >
@@ -353,11 +394,7 @@ export default function TulisArtikelPage() {
                   </button>
                   <button
                     onClick={() => execCmd("underline")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.underline
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.underline ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Underline"
                     type="button"
                   >
@@ -365,26 +402,16 @@ export default function TulisArtikelPage() {
                   </button>
                   <button
                     onClick={() => execCmd("strikeThrough")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.strikeThrough
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.strikeThrough ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Strikethrough"
                     type="button"
                   >
                     <Strikethrough size={16} />
                   </button>
-
                   <div className="w-px h-5 bg-gray-200 mx-2" />
-
                   <button
                     onClick={() => execCmd("justifyLeft")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.justifyLeft
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.justifyLeft ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Align Left"
                     type="button"
                   >
@@ -392,11 +419,7 @@ export default function TulisArtikelPage() {
                   </button>
                   <button
                     onClick={() => execCmd("justifyCenter")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.justifyCenter
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.justifyCenter ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Align Center"
                     type="button"
                   >
@@ -404,34 +427,22 @@ export default function TulisArtikelPage() {
                   </button>
                   <button
                     onClick={() => execCmd("justifyRight")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.justifyRight
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.justifyRight ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Align Right"
                     type="button"
                   >
                     <AlignRight size={16} />
                   </button>
-
                   <div className="w-px h-5 bg-gray-200 mx-2" />
-
                   <button
                     onClick={() => execCmd("insertUnorderedList")}
-                    className={`p-2 rounded-lg transition-all ${
-                      activeFormats.insertUnorderedList
-                        ? "bg-[#233982] text-white"
-                        : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"
-                    }`}
+                    className={`p-2 rounded-lg transition-all ${activeFormats.insertUnorderedList ? "bg-[#233982] text-white" : "text-[#C4C4C4] hover:text-[#233982] hover:bg-[#233982]/10"}`}
                     title="Bullet List"
                     type="button"
                   >
                     <List size={16} />
                   </button>
-
                   <div className="w-px h-5 bg-gray-200 mx-2" />
-
                   <select
                     onChange={(e) => {
                       execCmd("formatBlock", e.target.value);
@@ -450,7 +461,6 @@ export default function TulisArtikelPage() {
                   </select>
                 </div>
 
-                {/* Content Editable Area - FIX: Tidak pakai dangerouslySetInnerHTML */}
                 <div
                   ref={editorRef}
                   contentEditable
@@ -503,11 +513,7 @@ export default function TulisArtikelPage() {
                     }}
                     onDragLeave={() => setIsDragging(false)}
                     onDrop={handleDrop}
-                    className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl transition-all cursor-pointer ${
-                      isDragging
-                        ? "border-[#233982] bg-[#233982]/[0.05]"
-                        : "border-gray-200 hover:border-[#233982]/30"
-                    }`}
+                    className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl transition-all cursor-pointer ${isDragging ? "border-[#233982] bg-[#233982]/[0.05]" : "border-gray-200 hover:border-[#233982]/30"}`}
                   >
                     <label className="flex flex-col items-center justify-center pt-5 pb-6 cursor-pointer w-full h-full">
                       <Upload
@@ -552,7 +558,6 @@ export default function TulisArtikelPage() {
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <h3 className="font-bold text-sm text-[#1B1B1B] mb-3 flex items-center gap-2">
                     <Tag size={16} className="text-[#4F619B]" /> Tag
@@ -649,7 +654,6 @@ export default function TulisArtikelPage() {
                   <X size={20} />
                 </button>
               </div>
-
               <div className="p-8 md:p-12 overflow-y-auto flex-1 bg-white">
                 <div className="max-w-3xl mx-auto">
                   {coverImage && (
@@ -661,7 +665,6 @@ export default function TulisArtikelPage() {
                       />
                     </div>
                   )}
-
                   <div className="flex items-center gap-3 mb-4">
                     {category && (
                       <span className="px-3 py-1 bg-[#233982]/10 text-[#233982] text-xs font-bold rounded-full">
@@ -682,11 +685,9 @@ export default function TulisArtikelPage() {
                       </div>
                     )}
                   </div>
-
                   <h1 className="text-3xl md:text-4xl font-black text-[#1B1B1B] leading-tight mb-6">
                     {title || "Judul Artikel Anda..."}
                   </h1>
-
                   <div className="flex items-center gap-3 pb-8 mb-8 border-b border-gray-100">
                     <div className="w-10 h-10 bg-[#233982] text-white rounded-full flex items-center justify-center font-bold text-sm">
                       J
@@ -705,7 +706,6 @@ export default function TulisArtikelPage() {
                       </p>
                     </div>
                   </div>
-
                   <div
                     className="prose prose-lg max-w-none text-[#1B1B1B]/80 leading-relaxed"
                     dangerouslySetInnerHTML={{

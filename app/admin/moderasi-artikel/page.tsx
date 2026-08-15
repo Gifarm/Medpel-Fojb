@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -12,19 +13,13 @@ import {
   Clock,
   FileText,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
   Check,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import toast from "react-hot-toast";
-
-const COLORS = {
-  primary: "#FCC200",
-  blueDark: "#233982",
-  blue: "#4F619B",
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-};
 
 // --- Komponen Badge Status ---
 const StatusBadge = ({ status }: { status: string }) => {
@@ -78,33 +73,48 @@ export default function ModerasiArtikelPage() {
   const [articles, setArticles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch Data Artikel dari API
-  useEffect(() => {
-    const fetchArticles = async () => {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams({
-          search: searchQuery,
-          status: statusFilter,
-        });
-        const res = await fetch(`/api/admin/articles?${params.toString()}`);
-        const result = await res.json();
-        if (result.success) {
-          setArticles(result.data);
-        }
-      } catch (error) {
-        console.error("Gagal memuat data artikel", error);
-        toast.error("Gagal memuat data artikel");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // PERBAIKAN 4: State untuk pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10;
 
-    const timer = setTimeout(fetchArticles, 300);
-    return () => clearTimeout(timer);
+  // Fetch Data Artikel dari API
+  const fetchArticles = async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        search: searchQuery,
+        status: statusFilter,
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+      const res = await fetch(`/api/admin/articles?${params.toString()}`);
+      const result = await res.json();
+      if (result.success) {
+        setArticles(result.data);
+        setTotalPages(result.pagination.totalPages);
+      } else {
+        toast.error(result.error || "Gagal memuat data artikel");
+      }
+    } catch (error) {
+      console.error("Gagal memuat data artikel", error);
+      toast.error("Gagal memuat data artikel");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // PERBAIKAN 5: Pisahkan useEffect untuk reset page dan fetch data
+  useEffect(() => {
+    setCurrentPage(1);
   }, [searchQuery, statusFilter]);
 
-  // Stats Data (Otomatis update karena berbasis state 'articles')
+  useEffect(() => {
+    const timer = setTimeout(fetchArticles, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter, currentPage]);
+
+  // Stats Data
   const stats = [
     {
       label: "Menunggu Review",
@@ -138,16 +148,14 @@ export default function ModerasiArtikelPage() {
     },
   ];
 
-  // --- OPTIMISTIC UI UPDATE: Langsung ubah status di frontend, lalu sync ke backend ---
+  // --- OPTIMISTIC UI UPDATE ---
   const handleUpdateStatus = async (newStatus: string) => {
     if (!selectedArticle) return;
 
     setIsActionLoading(true);
 
-    // 1. Simpan state asli untuk rollback jika gagal
     const originalArticles = [...articles];
 
-    // 2. LANGSUNG update state di frontend (Instant UI Change!)
     const updatedArticles = articles.map((art) =>
       art.id === selectedArticle.id ? { ...art, status: newStatus } : art,
     );
@@ -167,11 +175,9 @@ export default function ModerasiArtikelPage() {
 
       const result = await res.json();
       if (!result.success) {
-        // 3. Rollback jika server menolak
         setArticles(originalArticles);
         toast.error(result.error || "Gagal memperbarui status");
       } else {
-        // 4. Sukses: Tampilkan toast dan tutup modal
         toast.success(
           newStatus === "Approved"
             ? "Artikel berhasil disetujui & dipublikasikan!"
@@ -183,7 +189,6 @@ export default function ModerasiArtikelPage() {
         setRevisionNote("");
       }
     } catch (error) {
-      // 5. Rollback jika error jaringan
       setArticles(originalArticles);
       toast.error("Terjadi kesalahan jaringan. Perubahan dibatalkan.");
     } finally {
@@ -343,7 +348,6 @@ export default function ModerasiArtikelPage() {
                           </p>
                         </td>
                         <td className="px-6 py-4">
-                          {/* Status badge akan langsung berubah warna tanpa refresh! */}
                           <StatusBadge status={article.status} />
                         </td>
                         <td className="px-6 py-4">
@@ -360,7 +364,6 @@ export default function ModerasiArtikelPage() {
                                 <button
                                   onClick={() => {
                                     setSelectedArticle(article);
-                                    // Delay sedikit agar modal terbuka dulu, baru status berubah
                                     setTimeout(
                                       () => handleUpdateStatus("Approved"),
                                       100,
@@ -409,11 +412,36 @@ export default function ModerasiArtikelPage() {
               </table>
             </div>
 
-            {/* Pagination Info */}
+            {/* PERBAIKAN 6: Pagination Controls */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-[#C4C4C4]">
-                Menampilkan {articles.length} artikel
+                Menampilkan halaman {currentPage} dari {totalPages || 1}
               </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1 || isLoading}
+                  className="p-2 text-[#C4C4C4] hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-xs font-bold text-[#1B1B1B] px-2">
+                  {currentPage} / {totalPages || 1}
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={
+                    currentPage === totalPages || totalPages === 0 || isLoading
+                  }
+                  className="p-2 text-[#C4C4C4] hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -462,6 +490,17 @@ export default function ModerasiArtikelPage() {
 
               {/* Modal Body */}
               <div className="p-8 overflow-y-auto flex-1">
+                {/* PERBAIKAN 7: Tampilkan Cover Image */}
+                {selectedArticle.coverImage && (
+                  <div className="w-full h-64 rounded-2xl overflow-hidden mb-6 shadow-lg">
+                    <img
+                      src={selectedArticle.coverImage}
+                      alt="Cover"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-center gap-3 mb-6">
                   <StatusBadge status={selectedArticle.status} />
                   <span className="text-xs font-semibold text-[#4F619B] bg-[#4F619B]/10 px-2.5 py-1 rounded-md">
@@ -494,10 +533,14 @@ export default function ModerasiArtikelPage() {
                       {selectedArticle.excerpt}
                     </p>
                   )}
-                  <div className="whitespace-pre-wrap">
-                    {selectedArticle.content ||
-                      "Konten artikel belum tersedia."}
-                  </div>
+                  <div
+                    className="whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        selectedArticle.content ||
+                        "Konten artikel belum tersedia.",
+                    }}
+                  />
                 </div>
 
                 {/* Input Catatan Revisi */}

@@ -1,23 +1,14 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  User,
-  Mail,
-  Lock,
-  Save,
-  Camera,
-  Eye,
-  EyeOff,
-  FileText,
-  Shield,
-} from "lucide-react";
-import SidebarJurnalis from "@/components/jurnalis/Sidebar"; // Sesuaikan path
+import { User, Mail, Lock, Save, Eye, EyeOff, Loader2 } from "lucide-react";
+import SidebarJurnalis from "@/components/jurnalis/Sidebar";
 import toast from "react-hot-toast";
 
-// --- Komponen Input Field Kustom (Mendukung Text, Password, Textarea) ---
+// --- Komponen Input Field Kustom ---
 const InputField = ({
   icon: Icon,
   label,
@@ -28,7 +19,6 @@ const InputField = ({
   disabled = false,
   rightIcon: RightIcon,
   onRightIconClick,
-  rows,
 }: any) => (
   <div className="mb-5">
     <label className="block text-xs font-bold text-[#C4C4C4] uppercase tracking-wide mb-1.5">
@@ -45,32 +35,18 @@ const InputField = ({
           size={18}
         />
       )}
-      {type === "textarea" ? (
-        <textarea
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          rows={rows || 3}
-          className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 ${
-            Icon ? "pl-12" : ""
-          } text-sm font-medium text-[#1B1B1B] focus:ring-2 focus:ring-[#FCC200]/20 focus:border-[#FCC200] outline-none transition-all resize-none ${
-            disabled ? "cursor-not-allowed text-[#C4C4C4]" : ""
-          }`}
-        />
-      ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 ${
-            Icon ? "pl-12" : "pl-4"
-          } ${RightIcon ? "pr-12" : "pr-4"} text-sm font-medium text-[#1B1B1B] focus:ring-2 focus:ring-[#FCC200]/20 focus:border-[#FCC200] outline-none transition-all ${
-            disabled ? "cursor-not-allowed text-[#C4C4C4]" : ""
-          }`}
-        />
-      )}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={`w-full bg-gray-50 border border-gray-200 rounded-xl py-3 ${
+          Icon ? "pl-12" : "pl-4"
+        } ${RightIcon ? "pr-12" : "pr-4"} text-sm font-medium text-[#1B1B1B] focus:ring-2 focus:ring-[#FCC200]/20 focus:border-[#FCC200] outline-none transition-all ${
+          disabled ? "cursor-not-allowed text-[#C4C4C4]" : ""
+        }`}
+      />
       {RightIcon && type !== "textarea" && (
         <button
           type="button"
@@ -88,6 +64,7 @@ const InputField = ({
 export default function PengaturanAkunJurnalis() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // State Show/Hide Password
   const [showOldPass, setShowOldPass] = useState(false);
@@ -96,10 +73,9 @@ export default function PengaturanAkunJurnalis() {
 
   // State Form Data
   const [profile, setProfile] = useState({
-    name: "Siska Putri",
-    email: "siska@mediapelajar.id",
+    name: "",
+    email: "",
     role: "Jurnalis",
-    bio: "Pelajar SMA 1 Jakarta. Suka menulis tentang teknologi, sains, dan isu sosial remaja.",
   });
 
   const [passwords, setPasswords] = useState({
@@ -107,6 +83,24 @@ export default function PengaturanAkunJurnalis() {
     newPass: "",
     confirmPass: "",
   });
+
+  // 1. Ambil data user dari localStorage saat komponen dimuat
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setProfile({
+          name: user.name || "",
+          email: user.email || "",
+          role: user.role || "Jurnalis",
+        });
+      } catch (error) {
+        console.error("Gagal memuat data user", error);
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
   const handleProfileChange = (field: string, val: string) => {
     setProfile({ ...profile, [field]: val });
@@ -116,24 +110,67 @@ export default function PengaturanAkunJurnalis() {
     setPasswords({ ...passwords, [field]: val });
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  // 2. Fungsi Simpan ke Database (Real API Call)
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validasi sederhana password
+    // Validasi password
     if (passwords.newPass && passwords.newPass !== passwords.confirmPass) {
       toast.error("Password baru dan konfirmasi password tidak cocok!");
       return;
     }
 
+    if (passwords.newPass && passwords.newPass.length < 8) {
+      toast.error("Password baru minimal 8 karakter!");
+      return;
+    }
+
     setIsSaving(true);
-    // Simulasi API Call
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/jurnalis/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profile.name,
+          email: profile.email,
+          oldPassword: passwords.oldPass,
+          newPassword: passwords.newPass,
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Profil jurnalis berhasil diperbarui!");
+
+        // Update localStorage agar UI di tempat lain tetap sinkron
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          user.name = result.data.name;
+          user.email = result.data.email;
+          localStorage.setItem("user", JSON.stringify(user));
+        }
+
+        // Reset field password setelah sukses
+        setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
+      } else {
+        toast.error(result.error || "Gagal memperbarui profil");
+      }
+    } catch (error) {
+      console.error("Update profile error:", error);
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsSaving(false);
-      toast.success("Profil jurnalis berhasil diperbarui!");
-      // Reset field password setelah sukses
-      setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
-    }, 1000);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
@@ -161,7 +198,7 @@ export default function PengaturanAkunJurnalis() {
 
         <div className="p-8 max-w-[900px] mx-auto space-y-8 pb-24">
           <form onSubmit={handleSave}>
-            {/* 1. Avatar & Informasi Dasar */}
+            {/* 1. Informasi Dasar */}
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -182,7 +219,6 @@ export default function PengaturanAkunJurnalis() {
               </div>
 
               <div className="flex flex-col md:flex-row gap-8 items-start">
-                {/* Form Fields */}
                 <div className="flex-1 w-full">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
                     <InputField
@@ -207,18 +243,7 @@ export default function PengaturanAkunJurnalis() {
                   </div>
 
                   <InputField
-                    label="Bio Jurnalis (Publik)"
-                    type="textarea"
-                    rows={3}
-                    value={profile.bio}
-                    onChange={(e: any) =>
-                      handleProfileChange("bio", e.target.value)
-                    }
-                    placeholder="Ceritakan sedikit tentang diri Anda dan topik yang sering Anda tulis..."
-                    description="Bio ini akan ditampilkan di halaman profil penulis pada setiap artikel Anda."
-                  />
-
-                  <InputField
+                    icon={User}
                     label="Peran (Role)"
                     value={profile.role}
                     onChange={() => {}}
@@ -302,6 +327,9 @@ export default function PengaturanAkunJurnalis() {
             >
               <button
                 type="button"
+                onClick={() =>
+                  setPasswords({ oldPass: "", newPass: "", confirmPass: "" })
+                }
                 className="px-6 py-3 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] bg-white border border-gray-200 rounded-xl transition-all hover:bg-gray-50"
               >
                 Batal
@@ -313,16 +341,7 @@ export default function PengaturanAkunJurnalis() {
               >
                 {isSaving ? (
                   <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 1,
-                        ease: "linear",
-                      }}
-                    >
-                      <Lock size={16} />
-                    </motion.div>
+                    <Loader2 className="animate-spin" size={16} />
                     Menyimpan...
                   </>
                 ) : (

@@ -12,10 +12,10 @@ export async function GET(request: Request) {
 
     const where: any = {};
 
-    if (search) {
+    if (search && search.trim() !== "") {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: search.trim() } },
+        { email: { contains: search.trim() } },
       ];
     }
 

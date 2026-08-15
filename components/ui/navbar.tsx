@@ -444,14 +444,7 @@ export default function Navbar() {
                     >
                       <UserCircle size={16} /> Profil Saya
                     </button>
-                    {user.role !== "MEMBER" && (
-                      <button
-                        onClick={() => router.push("/")}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        <BarChart3 size={16} /> Dashboard
-                      </button>
-                    )}
+
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -676,17 +669,7 @@ export default function Navbar() {
                     >
                       <UserCircle size={16} /> Profil Saya
                     </button>
-                    {user.role !== "MEMBER" && (
-                      <button
-                        onClick={() => {
-                          router.push("/");
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
-                      >
-                        <BarChart3 size={16} /> Dashboard
-                      </button>
-                    )}
+
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-colors"
