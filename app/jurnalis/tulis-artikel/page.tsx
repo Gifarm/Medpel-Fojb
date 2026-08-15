@@ -2,7 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  Suspense,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Save,
@@ -32,7 +38,7 @@ import SidebarJurnalis from "@/components/jurnalis/Sidebar";
 import toast from "react-hot-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function TulisArtikelPage() {
+function TulisArtikelContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("edit"); // Ambil ID artikel jika mode edit
@@ -722,5 +728,12 @@ export default function TulisArtikelPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+export default function TulisArtikelPage() {
+  return (
+    <Suspense fallback={null}>
+      <TulisArtikelContent />
+    </Suspense>
   );
 }
