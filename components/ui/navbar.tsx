@@ -438,12 +438,12 @@ export default function Navbar() {
                     </span>
                   </div>
                   <div className="p-2">
-                    <button
+                    {/* <button
                       onClick={() => router.push("/profil")}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                     >
                       <UserCircle size={16} /> Profil Saya
-                    </button>
+                    </button> */}
 
                     <button
                       onClick={handleLogout}
@@ -660,7 +660,7 @@ export default function Navbar() {
                         </span>
                       </div>
                     </div>
-                    <button
+                    {/* <button
                       onClick={() => {
                         router.push("/profil");
                         setIsMobileMenuOpen(false);
@@ -668,7 +668,7 @@ export default function Navbar() {
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
                     >
                       <UserCircle size={16} /> Profil Saya
-                    </button>
+                    </button> */}
 
                     <button
                       onClick={handleLogout}

@@ -220,12 +220,12 @@ export default function ModerasiArtikelPage() {
               Tinjau, revisi, atau publikasikan konten jurnalis
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <button className="px-4 py-2 bg-[#233982] text-white text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-[#4F619B] transition-all shadow-md shadow-[#233982]/20">
               <FileText size={16} />
               Panduan Moderasi
             </button>
-          </div>
+          </div> */}
         </header>
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">

@@ -27,7 +27,11 @@ enum CommentStatus {
   REJECTED
   HIDDEN
 }
-// ... (enum dan model sebelumnya tetap sama) ...
+enum TaskStatus {
+  ACTIVE
+  COMPLETED // Jika quota sudah terpenuhi
+  CANCELLED
+}
 
 model User {
   id          String      @id @default(cuid())
@@ -45,6 +49,10 @@ model User {
   articles    Article[]
   comments    Comment[]
   notifications Notification[] // <-- TAMBAHKAN INI
+
+  // Relasi KOL
+  kolWallet       KOLWallet?
+  taskSubmissions TaskSubmission[]
 }
 
 model Article {
@@ -153,4 +161,51 @@ model DailyTraffic {
   updatedAt DateTime @updatedAt
 
   @@index([date])
+}
+
+// ... (model User, Article, dll tetap sama) ...
+
+// Model Dompet Digital KOL
+model KOLWallet {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountName String   // Nama pemilik rekening/DANA
+  phoneNumber String   // Nomor HP DANA
+  balance     Int      @default(0) // Saldo dalam Rupiah (misal: 50000)
+  updatedAt   DateTime @updatedAt
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  title       String      // Judul task (misal: "Buat Konten TikTok Edukasi")
+  description String      // Detail pengerjaan
+  reward      Int         // Bayaran per KOL (misal: 20000)
+  quota       Int         // Kuota maksimal KOL (misal: 50)
+  claimed     Int         @default(0) // Berapa KOL yang sudah mengambil/mengerjakan
+  status      TaskStatus  @default(ACTIVE)
+  createdAt   DateTime    @default(now())
+  
+  submissions TaskSubmission[]
+}
+
+
+
+model TaskSubmission {
+  id          String           @id @default(cuid())
+  taskId      String
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  kolId       String
+  kol         User             @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  proofLink   String           // Link bukti (Google Drive, TikTok, Instagram, dll)
+  status      SubmissionStatus @default(PENDING)
+  feedback    String?          // Catatan dari Admin jika ditolak
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+enum SubmissionStatus {
+  PENDING    // Menunggu review Admin
+  APPROVED   // Disetujui, saldo masuk ke dompet KOL
+  REJECTED   // Ditolak, perlu revisi
 }

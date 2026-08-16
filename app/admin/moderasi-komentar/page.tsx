@@ -201,12 +201,12 @@ export default function ModerasiKomentarPage() {
               Tinjau, sembunyikan, atau hapus komentar tidak pantas
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <button className="px-4 py-2 bg-white border border-gray-200 text-[#1B1B1B] text-xs font-bold rounded-xl flex items-center gap-2 hover:bg-gray-50 transition-all">
               <FileText size={16} />
               Pedoman Komentar
             </button>
-          </div>
+          </div> */}
         </header>
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">

@@ -153,20 +153,6 @@ const App = () => {
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative group hidden md:block">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C4C4C4] group-focus-within:text-[#233982] transition-colors"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Cari data..."
-                className="bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm w-64 focus:ring-2 focus:ring-[#233982]/20 focus:border-[#233982] transition-all outline-none text-[#1B1B1B] placeholder-[#C4C4C4]"
-              />
-            </div>
-          </div>
         </header>
 
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
