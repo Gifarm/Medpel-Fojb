@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -14,58 +15,14 @@ import {
   Loader2,
   AlertCircle,
   ArrowRight,
-  TrendingUp,
 } from "lucide-react";
-import SidebarKOL from "@/components/kol/SidebarKOL"; // Sesuaikan path
+import SidebarKOL from "@/components/kol/SidebarKOL";
 import toast from "react-hot-toast";
-
-// --- DUMMY DATA ---
-const initialTasks = [
-  {
-    id: "T001",
-    title: "Buat Konten TikTok Edukasi Beasiswa",
-    description:
-      "Buat video TikTok 30-60 detik tentang tips mendaftar beasiswa LPDP. Wajib pakai hashtag #MedPelBeasiswa dan tag @mediapelajar.id.",
-    reward: 25000,
-    quota: 50,
-    claimed: 12,
-    status: "ACTIVE",
-  },
-  {
-    id: "T002",
-    title: "Menulis Thread Twitter tentang Kesehatan Mental",
-    description:
-      "Minimal 5 thread berisi tips menjaga kesehatan mental saat ujian. Sertakan infografis sederhana dan gunakan hashtag #MentalHealthPelajar.",
-    reward: 30000,
-    quota: 20,
-    claimed: 19, // Hampir habis
-    status: "ACTIVE",
-  },
-  {
-    id: "T003",
-    title: "Review Buku Pelajaran di Instagram Story",
-    description:
-      "Upload story review buku paket terbaru, tag akun @mediapelajar.id dan sertakan link di bio. Minimal 3 slide story.",
-    reward: 15000,
-    quota: 30,
-    claimed: 30,
-    status: "COMPLETED",
-  },
-  {
-    id: "T004",
-    title: "Membuat Artikel Blog Mini tentang Coding",
-    description:
-      "Tulis artikel 500 kata tentang 'Belajar Coding untuk Pemula'. Submit dalam bentuk Google Docs.",
-    reward: 50000,
-    quota: 10,
-    claimed: 2,
-    status: "ACTIVE",
-  },
-];
 
 export default function DaftarTaskPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // State Filter & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -75,6 +32,29 @@ export default function DaftarTaskPage() {
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+
+  // Fetch Tasks dari API
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/kol/tasks");
+      const result = await res.json();
+      if (result.success) {
+        setTasks(result.data);
+      } else {
+        toast.error(result.error || "Gagal memuat daftar task");
+      }
+    } catch (error) {
+      console.error("Gagal memuat daftar task", error);
+      toast.error("Gagal memuat daftar task");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   // Format Rupiah
   const formatRupiah = (amount: number) => {
@@ -95,11 +75,7 @@ export default function DaftarTaskPage() {
       if (filterType === "HIGH_REWARD")
         return matchesSearch && task.reward >= 30000;
       if (filterType === "ALMOST_FULL")
-        return (
-          matchesSearch &&
-          task.status === "ACTIVE" &&
-          task.claimed / task.quota > 0.8
-        );
+        return matchesSearch && task.claimed / task.quota > 0.8;
 
       return matchesSearch; // ALL
     });
@@ -116,25 +92,33 @@ export default function DaftarTaskPage() {
   };
 
   // Handler Konfirmasi Ambil Task
-  const handleConfirmClaim = () => {
+  const handleConfirmClaim = async () => {
     if (!selectedTask) return;
     setIsClaiming(true);
 
-    // Simulasi API Call
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === selectedTask.id ? { ...t, claimed: t.claimed + 1 } : t,
-        ),
-      );
+    try {
+      const res = await fetch("/api/kol/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: selectedTask.id }),
+      });
 
-      setIsClaimModalOpen(false);
-      setSelectedTask(null);
+      const result = await res.json();
+      if (result.success) {
+        toast.success(
+          `Berhasil mengambil task "${selectedTask.title}"! Segera kerjakan.`,
+        );
+        setIsClaimModalOpen(false);
+        setSelectedTask(null);
+        fetchTasks(); // Refresh data agar kuota terupdate
+      } else {
+        toast.error(result.error || "Gagal mengambil task");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsClaiming(false);
-      toast.success(
-        `Berhasil mengambil task "${selectedTask.title}"! Segera kerjakan.`,
-      );
-    }, 1000);
+    }
   };
 
   return (
@@ -196,7 +180,11 @@ export default function DaftarTaskPage() {
           </div>
 
           {/* 2. Task Grid/List */}
-          {filteredTasks.length > 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="animate-spin text-[#233982]" size={32} />
+            </div>
+          ) : filteredTasks.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredTasks.map((task) => {
                 const progressPercent = (task.claimed / task.quota) * 100;
@@ -259,7 +247,9 @@ export default function DaftarTaskPage() {
                       <div className="w-full bg-gray-200 rounded-full h-1.5 mb-4 overflow-hidden">
                         <div
                           className={`h-1.5 rounded-full transition-all duration-500 ${isAlmostFull ? "bg-red-500" : "bg-[#FCC200]"}`}
-                          style={{ width: `${progressPercent}%` }}
+                          style={{
+                            width: `${Math.min(progressPercent, 100)}%`,
+                          }}
                         />
                       </div>
 

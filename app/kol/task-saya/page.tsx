@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase,
@@ -16,53 +17,8 @@ import {
   Send,
   MessageSquare,
 } from "lucide-react";
-import SidebarKOL from "@/components/kol/SidebarKOL"; // Sesuaikan path
+import SidebarKOL from "@/components/kol/SidebarKOL";
 import toast from "react-hot-toast";
-
-// --- DUMMY DATA ---
-const initialMyTasks = [
-  {
-    id: "S001",
-    taskId: "T001",
-    title: "Buat Konten TikTok Edukasi Beasiswa",
-    reward: 25000,
-    status: "APPROVED",
-    proofLink: "https://tiktok.com/@rina/video/123",
-    feedback: "",
-    updatedAt: "26 Okt 2024",
-  },
-  {
-    id: "S002",
-    taskId: "T002",
-    title: "Menulis Thread Twitter Kesehatan Mental",
-    reward: 30000,
-    status: "REJECTED",
-    proofLink: "https://twitter.com/rina/status/999",
-    feedback:
-      "Thread kamu baru 3, minimal harus 5 thread. Dan infografisnya kurang jelas, tolong perbaiki ya!",
-    updatedAt: "28 Okt 2024",
-  },
-  {
-    id: "S003",
-    taskId: "T004",
-    title: "Membuat Artikel Blog Mini tentang Coding",
-    reward: 50000,
-    status: "PENDING",
-    proofLink: "https://docs.google.com/document/d/12345",
-    feedback: "",
-    updatedAt: "29 Okt 2024",
-  },
-  {
-    id: "S004",
-    taskId: "T005",
-    title: "Review Aplikasi Belajar di Instagram Story",
-    reward: 15000,
-    status: "CLAIMED", // Baru diambil, belum disubmit
-    proofLink: "",
-    feedback: "",
-    updatedAt: "30 Okt 2024",
-  },
-];
 
 // --- KOMPONEN BADGE ---
 const StatusBadge = ({ status }: { status: string }) => {
@@ -98,15 +54,38 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function TaskSayaPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [tasks, setTasks] = useState(initialMyTasks);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("ALL");
 
   // State Modal Submit
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [submissionLink, setSubmissionLink] = useState("");
-  const [submissionNote, setSubmissionNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch Data Submissions dari API
+  const fetchSubmissions = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/kol/submissions");
+      const result = await res.json();
+      if (result.success) {
+        setTasks(result.data);
+      } else {
+        toast.error(result.error || "Gagal memuat data task");
+      }
+    } catch (error) {
+      console.error("Gagal memuat data task", error);
+      toast.error("Gagal memuat data task");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, []);
 
   // Format Rupiah
   const formatRupiah = (amount: number) => {
@@ -151,12 +130,11 @@ export default function TaskSayaPage() {
   const openSubmitModal = (task: any) => {
     setSelectedTask(task);
     setSubmissionLink(task.proofLink || ""); // Jika revisi, link lama muncul
-    setSubmissionNote("");
     setIsSubmitModalOpen(true);
   };
 
   // Handler Kirim Submission
-  const handleSubmitProof = (e: React.FormEvent) => {
+  const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!submissionLink.trim()) {
       toast.error("Link bukti pengerjaan wajib diisi!");
@@ -164,27 +142,33 @@ export default function TaskSayaPage() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === selectedTask.id
-            ? {
-                ...t,
-                status: "PENDING",
-                proofLink: submissionLink,
-                updatedAt: "Baru saja",
-              }
-            : t,
-        ),
-      );
+    try {
+      const res = await fetch("/api/kol/submissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId: selectedTask.id,
+          proofLink: submissionLink,
+        }),
+      });
 
-      setIsSubmitModalOpen(false);
-      setSelectedTask(null);
+      const result = await res.json();
+      if (result.success) {
+        toast.success(
+          "Bukti pengerjaan berhasil dikirim! Menunggu review admin.",
+        );
+        setIsSubmitModalOpen(false);
+        setSelectedTask(null);
+        setSubmissionLink("");
+        fetchSubmissions(); // Refresh data agar status berubah jadi PENDING
+      } else {
+        toast.error(result.error || "Gagal mengirim bukti");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsSubmitting(false);
-      toast.success(
-        "Bukti pengerjaan berhasil dikirim! Menunggu review admin.",
-      );
-    }, 1000);
+    }
   };
 
   return (
@@ -245,7 +229,11 @@ export default function TaskSayaPage() {
           {/* 2. Task List */}
           <div className="space-y-4">
             <AnimatePresence mode="popLayout">
-              {filteredTasks.length > 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center py-20">
+                  <Loader2 className="animate-spin text-[#233982]" size={32} />
+                </div>
+              ) : filteredTasks.length > 0 ? (
                 filteredTasks.map((task) => (
                   <motion.div
                     key={task.id}
@@ -274,7 +262,7 @@ export default function TaskSayaPage() {
 
                         {/* Feedback Box (Jika Ditolak) */}
                         {task.status === "REJECTED" && task.feedback && (
-                          <div className="mt-3 ml-13 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
+                          <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
                             <AlertCircle
                               size={16}
                               className="text-red-600 flex-shrink-0 mt-0.5"
@@ -294,7 +282,7 @@ export default function TaskSayaPage() {
                         {(task.status === "PENDING" ||
                           task.status === "APPROVED") &&
                           task.proofLink && (
-                            <div className="mt-3 ml-13 flex items-center gap-2 text-xs">
+                            <div className="mt-3 flex items-center gap-2 text-xs">
                               <span className="text-[#C4C4C4] font-medium">
                                 Link Bukti:
                               </span>
@@ -428,25 +416,6 @@ export default function TaskSayaPage() {
                     Pastikan link bisa diakses oleh Admin (Public/Anyone with
                     link).
                   </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#C4C4C4] uppercase tracking-wide mb-1.5">
-                    Catatan Tambahan (Opsional)
-                  </label>
-                  <div className="relative">
-                    <MessageSquare
-                      className="absolute left-3 top-3 text-[#C4C4C4]"
-                      size={16}
-                    />
-                    <textarea
-                      value={submissionNote}
-                      onChange={(e) => setSubmissionNote(e.target.value)}
-                      rows={3}
-                      placeholder="Tulis catatan jika ada..."
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm font-medium text-[#1B1B1B] focus:ring-2 focus:ring-[#233982]/20 focus:border-[#233982] outline-none transition-all resize-none"
-                    />
-                  </div>
                 </div>
 
                 <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">

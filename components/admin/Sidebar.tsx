@@ -43,7 +43,7 @@ export default function Sidebar({
       name: "Manajemen Task KOL",
       icon: Briefcase,
       path: "/admin/manajemen-task-kol",
-    }, // <-- BARU
+    },
     { name: "Pencairan KOL", icon: Wallet, path: "/admin/pencairan-kol" }, // <-- BARU
     { name: "Kategori & Tag", icon: Tags, path: "/admin/kategori-tag" },
     {

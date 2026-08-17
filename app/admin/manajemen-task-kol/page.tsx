@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -15,96 +16,9 @@ import {
   ExternalLink,
   AlertCircle,
   Loader2,
-  Search,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import toast from "react-hot-toast";
-
-// --- WARNA TEMA ---
-const COLORS = {
-  primary: "#FCC200",
-  blueDark: "#233982",
-  blue: "#4F619B",
-  black: "#1B1B1B",
-  gray: "#C4C4C4",
-};
-
-// --- DUMMY DATA ---
-const initialTasks = [
-  {
-    id: "T001",
-    title: "Buat Konten TikTok Edukasi Beasiswa",
-    description:
-      "Buat video TikTok 30-60 detik tentang tips mendaftar beasiswa LPDP. Wajib pakai hashtag #MedPelBeasiswa.",
-    reward: 25000,
-    quota: 50,
-    claimed: 12,
-    status: "ACTIVE",
-    createdAt: "2024-10-25",
-  },
-  {
-    id: "T002",
-    title: "Review Buku Pelajaran di Instagram Story",
-    description:
-      "Upload story review buku paket terbaru, tag akun @mediapelajar.id dan sertakan link di bio.",
-    reward: 15000,
-    quota: 30,
-    claimed: 30,
-    status: "COMPLETED",
-    createdAt: "2024-10-20",
-  },
-  {
-    id: "T003",
-    title: "Menulis Thread Twitter tentang Kesehatan Mental",
-    description:
-      "Minimal 5 thread berisi tips menjaga kesehatan mental saat ujian. Sertakan infografis sederhana.",
-    reward: 30000,
-    quota: 20,
-    claimed: 5,
-    status: "ACTIVE",
-    createdAt: "2024-10-28",
-  },
-];
-
-const initialSubmissions = [
-  {
-    id: "S001",
-    taskId: "T001",
-    kolName: "Rina Kartika",
-    proofLink: "https://tiktok.com/@rina/video/123",
-    status: "PENDING",
-    feedback: "",
-    submittedAt: "2024-10-26",
-  },
-  {
-    id: "S002",
-    taskId: "T001",
-    kolName: "Dimas Prasetyo",
-    proofLink: "https://tiktok.com/@dimas/video/456",
-    status: "APPROVED",
-    feedback: "",
-    submittedAt: "2024-10-26",
-  },
-  {
-    id: "S003",
-    taskId: "T001",
-    kolName: "Siska Putri",
-    proofLink: "https://tiktok.com/@siska/video/789",
-    status: "REJECTED",
-    feedback:
-      "Video terlalu pendek dan tidak menyertakan hashtag yang diminta.",
-    submittedAt: "2024-10-27",
-  },
-  {
-    id: "S004",
-    taskId: "T003",
-    kolName: "Budi Santoso",
-    proofLink: "https://twitter.com/budi/status/123",
-    status: "PENDING",
-    feedback: "",
-    submittedAt: "2024-10-28",
-  },
-];
 
 // --- KOMPONEN BADGE ---
 const TaskStatusBadge = ({ status }: { status: string }) => {
@@ -154,8 +68,8 @@ export default function ManajemenTaskKOLPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // State Data
-  const [tasks, setTasks] = useState(initialTasks);
-  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // State Modal & Form
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -171,17 +85,42 @@ export default function ManajemenTaskKOLPage() {
     quota: "",
   });
 
-  // State Form Review (untuk feedback reject)
+  // State Form Review
   const [reviewFeedback, setReviewFeedback] = useState("");
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<
     string | null
   >(null);
 
-  // Hitung Statistik Dummy
+  // Fetch Tasks dari API
+  const fetchTasks = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/tasks");
+      const result = await res.json();
+      if (result.success) {
+        setTasks(result.data);
+      } else {
+        toast.error(result.error || "Gagal memuat data task");
+      }
+    } catch (error) {
+      console.error("Gagal memuat data task", error);
+      toast.error("Gagal memuat data task");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  // Hitung Statistik Real-time
   const activeTasksCount = tasks.filter((t) => t.status === "ACTIVE").length;
-  const pendingSubmissionsCount = submissions.filter(
-    (s) => s.status === "PENDING",
-  ).length;
+  const pendingSubmissionsCount = tasks.reduce(
+    (sum, t) =>
+      sum + t.submissions.filter((s: any) => s.status === "PENDING").length,
+    0,
+  );
   const totalBudgetAllocated = tasks.reduce(
     (sum, t) => sum + t.reward * t.claimed,
     0,
@@ -196,7 +135,7 @@ export default function ManajemenTaskKOLPage() {
   };
 
   // Handler Buat Task Baru
-  const handleCreateTask = (e: React.FormEvent) => {
+  const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.title || !newTask.reward || !newTask.quota) {
       toast.error("Semua field wajib diisi!");
@@ -204,27 +143,36 @@ export default function ManajemenTaskKOLPage() {
     }
 
     setIsSaving(true);
-    setTimeout(() => {
-      const task: any = {
-        id: `T00${tasks.length + 1}`,
-        title: newTask.title,
-        description: newTask.description,
-        reward: parseInt(newTask.reward),
-        quota: parseInt(newTask.quota),
-        claimed: 0,
-        status: "ACTIVE",
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setTasks([task, ...tasks]);
-      setIsCreateModalOpen(false);
-      setNewTask({ title: "", description: "", reward: "", quota: "" });
+    try {
+      const res = await fetch("/api/admin/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTask.title,
+          description: newTask.description,
+          reward: parseInt(newTask.reward),
+          quota: parseInt(newTask.quota),
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Task berhasil dibuat!");
+        setIsCreateModalOpen(false);
+        setNewTask({ title: "", description: "", reward: "", quota: "" });
+        fetchTasks(); // Refresh data
+      } else {
+        toast.error(result.error || "Gagal membuat task");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsSaving(false);
-      toast.success("Task berhasil dibuat!");
-    }, 800);
+    }
   };
 
   // Handler Approve/Reject Submission
-  const handleReviewSubmission = (
+  const handleReviewSubmission = async (
     submissionId: string,
     action: "APPROVED" | "REJECTED",
   ) => {
@@ -234,35 +182,35 @@ export default function ManajemenTaskKOLPage() {
     }
 
     setIsSaving(true);
-    setTimeout(() => {
-      setSubmissions((prev) =>
-        prev.map((s) =>
-          s.id === submissionId
-            ? {
-                ...s,
-                status: action,
-                feedback: action === "REJECTED" ? reviewFeedback : "",
-              }
-            : s,
-        ),
-      );
+    try {
+      const res = await fetch("/api/admin/submissions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionId,
+          action,
+          feedback: action === "REJECTED" ? reviewFeedback : undefined,
+        }),
+      });
 
-      // Jika approved, tambah claimed quota (simulasi)
-      if (action === "APPROVED" && selectedTask) {
-        setTasks((prev) =>
-          prev.map((t) =>
-            t.id === selectedTask.id ? { ...t, claimed: t.claimed + 1 } : t,
-          ),
+      const result = await res.json();
+      if (result.success) {
+        toast.success(
+          action === "APPROVED"
+            ? "Submission disetujui & saldo ditambahkan!"
+            : "Submission ditolak!",
         );
+        setReviewFeedback("");
+        setReviewingSubmissionId(null);
+        fetchTasks(); // Refresh data untuk update claimed & status
+      } else {
+        toast.error(result.error || "Gagal mengupdate submission");
       }
-
-      setReviewFeedback("");
-      setReviewingSubmissionId(null);
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsSaving(false);
-      toast.success(
-        action === "APPROVED" ? "Submission disetujui!" : "Submission ditolak!",
-      );
-    }, 800);
+    }
   };
 
   const formatRupiah = (amount: number) => {
@@ -373,72 +321,89 @@ export default function ManajemenTaskKOLPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {tasks.map((task) => {
-                    const taskSubmissions = submissions.filter(
-                      (s) => s.taskId === task.id,
-                    );
-                    const pendingCount = taskSubmissions.filter(
-                      (s) => s.status === "PENDING",
-                    ).length;
-
-                    return (
-                      <motion.tr
-                        key={task.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="group hover:bg-[#233982]/[0.02] transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1">
-                            {task.title}
-                          </p>
-                          <p className="text-[11px] text-[#C4C4C4] mt-0.5">
-                            Dibuat: {task.createdAt}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-bold text-[#233982]">
-                            {formatRupiah(task.reward)}
-                          </p>
-                          <p className="text-[11px] text-[#C4C4C4]">per KOL</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-[#FCC200] h-2 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${(task.claimed / task.quota) * 100}%`,
-                                }}
-                              />
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#233982] mx-auto"></div>
+                      </td>
+                    </tr>
+                  ) : tasks.length > 0 ? (
+                    tasks.map((task) => {
+                      const pendingCount = task.submissions.filter(
+                        (s: any) => s.status === "PENDING",
+                      ).length;
+                      return (
+                        <motion.tr
+                          key={task.id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="group hover:bg-[#233982]/[0.02] transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <p className="font-bold text-sm text-[#1B1B1B] line-clamp-1">
+                              {task.title}
+                            </p>
+                            <p className="text-[11px] text-[#C4C4C4] mt-0.5">
+                              Dibuat: {task.createdAt}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-bold text-[#233982]">
+                              {formatRupiah(task.reward)}
+                            </p>
+                            <p className="text-[11px] text-[#C4C4C4]">
+                              per KOL
+                            </p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 w-24 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-[#FCC200] h-2 rounded-full transition-all duration-500"
+                                  style={{
+                                    width: `${(task.claimed / task.quota) * 100}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-xs font-bold text-[#1B1B1B]">
+                                {task.claimed}/{task.quota}
+                              </span>
                             </div>
-                            <span className="text-xs font-bold text-[#1B1B1B]">
-                              {task.claimed}/{task.quota}
-                            </span>
-                          </div>
-                          {pendingCount > 0 && (
-                            <span className="text-[10px] text-yellow-600 font-semibold mt-1 block">
-                              {pendingCount} menunggu review
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <TaskStatusBadge status={task.status} />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => openReviewModal(task)}
-                              className="px-3 py-1.5 text-xs font-bold text-[#233982] bg-[#233982]/10 hover:bg-[#233982]/20 rounded-lg transition-all flex items-center gap-1.5"
-                            >
-                              <Eye size={14} /> Review ({taskSubmissions.length}
-                              )
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
+                            {pendingCount > 0 && (
+                              <span className="text-[10px] text-yellow-600 font-semibold mt-1 block">
+                                {pendingCount} menunggu review
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <TaskStatusBadge status={task.status} />
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => openReviewModal(task)}
+                                className="px-3 py-1.5 text-xs font-bold text-[#233982] bg-[#233982]/10 hover:bg-[#233982]/20 rounded-lg transition-all flex items-center gap-1.5"
+                              >
+                                <Eye size={14} /> Review (
+                                {task.submissions.length})
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center text-[#C4C4C4]">
+                          <Briefcase size={48} className="mb-3 opacity-20" />
+                          <p className="font-semibold text-sm">
+                            Belum ada task yang dibuat.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -600,8 +565,7 @@ export default function ManajemenTaskKOLPage() {
 
               <div className="p-6 overflow-y-auto flex-1">
                 <div className="space-y-4">
-                  {submissions.filter((s) => s.taskId === selectedTask.id)
-                    .length === 0 ? (
+                  {selectedTask.submissions.length === 0 ? (
                     <div className="text-center py-12 text-[#C4C4C4]">
                       <Briefcase
                         size={48}
@@ -612,108 +576,82 @@ export default function ManajemenTaskKOLPage() {
                       </p>
                     </div>
                   ) : (
-                    submissions
-                      .filter((s) => s.taskId === selectedTask.id)
-                      .map((sub) => (
-                        <div
-                          key={sub.id}
-                          className="border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-all bg-white"
-                        >
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-[#FCC200]/15 text-[#B48A00] rounded-full flex items-center justify-center font-bold text-sm">
-                                {sub.kolName.charAt(0)}
-                              </div>
-                              <div>
-                                <p className="font-bold text-sm text-[#1B1B1B]">
-                                  {sub.kolName}
-                                </p>
-                                <p className="text-[11px] text-[#C4C4C4]">
-                                  Disubmit: {sub.submittedAt}
-                                </p>
-                              </div>
+                    selectedTask.submissions.map((sub: any) => (
+                      <div
+                        key={sub.id}
+                        className="border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-all bg-white"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#FCC200]/15 text-[#B48A00] rounded-full flex items-center justify-center font-bold text-sm">
+                              {sub.kolName.charAt(0)}
                             </div>
-                            <SubmissionStatusBadge status={sub.status} />
+                            <div>
+                              <p className="font-bold text-sm text-[#1B1B1B]">
+                                {sub.kolName}
+                              </p>
+                              <p className="text-[11px] text-[#C4C4C4]">
+                                Disubmit: {sub.submittedAt}
+                              </p>
+                            </div>
                           </div>
+                          <SubmissionStatusBadge status={sub.status} />
+                        </div>
 
-                          <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                            <p className="text-xs font-bold text-[#C4C4C4] uppercase tracking-wide mb-2">
-                              Link Bukti Pengerjaan
+                        <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                          <p className="text-xs font-bold text-[#C4C4C4] uppercase tracking-wide mb-2">
+                            Link Bukti Pengerjaan
+                          </p>
+                          <a
+                            href={sub.proofLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-[#233982] hover:underline"
+                          >
+                            {sub.proofLink} <ExternalLink size={14} />
+                          </a>
+                        </div>
+
+                        {sub.status === "REJECTED" && sub.feedback && (
+                          <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4">
+                            <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-1 flex items-center gap-1">
+                              <AlertCircle size={12} /> Alasan Penolakan
                             </p>
-                            <a
-                              href={sub.proofLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 text-sm font-semibold text-[#233982] hover:underline"
-                            >
-                              {sub.proofLink} <ExternalLink size={14} />
-                            </a>
+                            <p className="text-sm text-red-700">
+                              {sub.feedback}
+                            </p>
                           </div>
+                        )}
 
-                          {sub.status === "REJECTED" && sub.feedback && (
-                            <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4">
-                              <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-1 flex items-center gap-1">
-                                <AlertCircle size={12} /> Alasan Penolakan
-                              </p>
-                              <p className="text-sm text-red-700">
-                                {sub.feedback}
-                              </p>
-                            </div>
-                          )}
-
-                          {sub.status === "PENDING" && (
-                            <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-                              {reviewingSubmissionId === sub.id ? (
-                                <div className="w-full space-y-3">
-                                  <textarea
-                                    value={reviewFeedback}
-                                    onChange={(e) =>
-                                      setReviewFeedback(e.target.value)
-                                    }
-                                    placeholder="Berikan alasan penolakan agar KOL bisa memperbaiki..."
-                                    rows={2}
-                                    className="w-full bg-red-50 border border-red-200 rounded-xl py-2 px-3 text-sm text-[#1B1B1B] focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none resize-none"
-                                  />
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      onClick={() => {
-                                        setReviewingSubmissionId(null);
-                                        setReviewFeedback("");
-                                      }}
-                                      className="px-4 py-2 text-xs font-bold text-[#C4C4C4] hover:text-[#1B1B1B]"
-                                    >
-                                      Batal
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleReviewSubmission(
-                                          sub.id,
-                                          "REJECTED",
-                                        )
-                                      }
-                                      disabled={isSaving}
-                                      className="px-4 py-2 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 flex items-center gap-1.5 disabled:opacity-50"
-                                    >
-                                      {isSaving ? (
-                                        <Loader2
-                                          className="animate-spin"
-                                          size={14}
-                                        />
-                                      ) : (
-                                        <XCircle size={14} />
-                                      )}{" "}
-                                      Tolak
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
+                        {sub.status === "PENDING" && (
+                          <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                            {reviewingSubmissionId === sub.id ? (
+                              <div className="w-full space-y-3">
+                                <textarea
+                                  value={reviewFeedback}
+                                  onChange={(e) =>
+                                    setReviewFeedback(e.target.value)
+                                  }
+                                  placeholder="Berikan alasan penolakan agar KOL bisa memperbaiki..."
+                                  rows={2}
+                                  className="w-full bg-red-50 border border-red-200 rounded-xl py-2 px-3 text-sm text-[#1B1B1B] focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none resize-none"
+                                />
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setReviewingSubmissionId(null);
+                                      setReviewFeedback("");
+                                    }}
+                                    className="px-4 py-2 text-xs font-bold text-[#C4C4C4] hover:text-[#1B1B1B]"
+                                  >
+                                    Batal
+                                  </button>
                                   <button
                                     onClick={() =>
-                                      handleReviewSubmission(sub.id, "APPROVED")
+                                      handleReviewSubmission(sub.id, "REJECTED")
                                     }
                                     disabled={isSaving}
-                                    className="flex-1 px-4 py-2.5 text-xs font-bold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    className="px-4 py-2 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 flex items-center gap-1.5 disabled:opacity-50"
                                   >
                                     {isSaving ? (
                                       <Loader2
@@ -721,24 +659,45 @@ export default function ManajemenTaskKOLPage() {
                                         size={14}
                                       />
                                     ) : (
-                                      <CheckCircle2 size={14} />
+                                      <XCircle size={14} />
                                     )}{" "}
-                                    Setujui & Cairkan
+                                    Tolak
                                   </button>
-                                  <button
-                                    onClick={() =>
-                                      setReviewingSubmissionId(sub.id)
-                                    }
-                                    className="flex-1 px-4 py-2.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-1.5"
-                                  >
-                                    <XCircle size={14} /> Tolak
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleReviewSubmission(sub.id, "APPROVED")
+                                  }
+                                  disabled={isSaving}
+                                  className="flex-1 px-4 py-2.5 text-xs font-bold text-white bg-green-600 rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                >
+                                  {isSaving ? (
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={14}
+                                    />
+                                  ) : (
+                                    <CheckCircle2 size={14} />
+                                  )}{" "}
+                                  Setujui & Cairkan
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setReviewingSubmissionId(sub.id)
+                                  }
+                                  className="flex-1 px-4 py-2.5 text-xs font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl hover:bg-red-100 transition-all flex items-center justify-center gap-1.5"
+                                >
+                                  <XCircle size={14} /> Tolak
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

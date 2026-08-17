@@ -53,6 +53,7 @@ model User {
   // Relasi KOL
   kolWallet       KOLWallet?
   taskSubmissions TaskSubmission[]
+  payoutRequests PayoutRequest[]
 }
 
 model Article {
@@ -190,7 +191,6 @@ model Task {
 }
 
 
-
 model TaskSubmission {
   id          String           @id @default(cuid())
   taskId      String
@@ -205,7 +205,26 @@ model TaskSubmission {
 }
 
 enum SubmissionStatus {
+  CLAIMED
   PENDING    // Menunggu review Admin
   APPROVED   // Disetujui, saldo masuk ke dompet KOL
   REJECTED   // Ditolak, perlu revisi
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+}
+
+model PayoutRequest {
+  id          String          @id @default(cuid())
+  kolId       String
+  kol         User            @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  amount      Int
+  status      PayoutStatus    @default(PENDING)
+  requestedAt DateTime        @default(now())
+  processedAt DateTime?
+
+  @@index([kolId])
+
 }

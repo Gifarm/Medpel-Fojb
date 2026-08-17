@@ -215,7 +215,7 @@ export default function DompetKOLPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <User size={14} className="text-[#C4C4C4]" />
                   <p className="text-[10px] font-bold text-[#C4C4C4] uppercase tracking-wide">
-                    Nama Pemilik DANA
+                    Nama Akun DANA
                   </p>
                 </div>
                 <p className="text-base font-bold text-[#1B1B1B]">
