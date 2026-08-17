@@ -11,7 +11,7 @@ const adapter = new PrismaMariaDb({
   database: process.env.DATABASE_NAME || "medpel_db",
   connectionLimit: 5,
   ssl: {
-    rejectUnauthorized: true, // atau sesuai certificate Aiven
+    rejectUnauthorized: false, // atau sesuai certificate Aiven
   },
 });
 
