@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Wallet,
@@ -19,54 +20,40 @@ import {
 import SidebarKOL from "@/components/kol/SidebarKOL";
 import toast from "react-hot-toast";
 
-// --- DUMMY DATA ---
-const initialWalletData = {
-  balance: 150000,
-  totalEarned: 450000,
-  danaName: "Rina Kartika Sari",
-  danaPhone: "081234567890",
-};
-
-const initialTransactions = [
-  {
-    id: "TRX001",
-    date: "26 Okt 2024",
-    taskTitle: "Buat Konten TikTok Edukasi Beasiswa",
-    amount: 25000,
-    type: "REWARD",
-  },
-  {
-    id: "TRX002",
-    date: "20 Okt 2024",
-    taskTitle: "Review Buku Pelajaran di IG Story",
-    amount: 15000,
-    type: "REWARD",
-  },
-  {
-    id: "TRX003",
-    date: "15 Okt 2024",
-    taskTitle: "Menulis Thread Twitter Kesehatan Mental",
-    amount: 30000,
-    type: "REWARD",
-  },
-  {
-    id: "TRX004",
-    date: "10 Okt 2024",
-    taskTitle: "Membuat Artikel Blog Mini tentang Coding",
-    amount: 50000,
-    type: "REWARD",
-  },
-];
-
 export default function DompetKOLPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [walletData, setWalletData] = useState(initialWalletData);
-  const [transactions] = useState(initialTransactions);
+  const [walletData, setWalletData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // State Modal Edit DANA
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({ danaName: "", danaPhone: "" });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fetch Data Dompet dari API
+  const fetchWalletData = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/kol/wallet");
+      const result = await res.json();
+      if (result.success) {
+        setWalletData(result.data.wallet);
+        setTransactions(result.data.transactions);
+      } else {
+        toast.error(result.error || "Gagal memuat data dompet");
+      }
+    } catch (error) {
+      console.error("Gagal memuat data dompet", error);
+      toast.error("Gagal memuat data dompet");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWalletData();
+  }, []);
 
   const formatRupiah = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -77,14 +64,16 @@ export default function DompetKOLPage() {
   };
 
   const openEditModal = () => {
-    setEditForm({
-      danaName: walletData.danaName,
-      danaPhone: walletData.danaPhone,
-    });
+    if (walletData) {
+      setEditForm({
+        danaName: walletData.danaName || "",
+        danaPhone: walletData.danaPhone || "",
+      });
+    }
     setIsEditModalOpen(true);
   };
 
-  const handleSaveDana = (e: React.FormEvent) => {
+  const handleSaveDana = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editForm.danaName.trim() || !editForm.danaPhone.trim()) {
       toast.error("Nama dan Nomor DANA wajib diisi!");
@@ -96,22 +85,43 @@ export default function DompetKOLPage() {
     }
 
     setIsSaving(true);
-    setTimeout(() => {
-      setWalletData((prev) => ({
-        ...prev,
-        danaName: editForm.danaName,
-        danaPhone: editForm.danaPhone,
-      }));
-      setIsEditModalOpen(false);
+    try {
+      const res = await fetch("/api/kol/wallet", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          danaName: editForm.danaName,
+          danaPhone: editForm.danaPhone,
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Akun DANA berhasil diperbarui!");
+        setIsEditModalOpen(false);
+        fetchWalletData(); // Refresh data agar UI terupdate
+      } else {
+        toast.error(result.error || "Gagal memperbarui akun DANA");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
       setIsSaving(false);
-      toast.success("Akun DANA berhasil diperbarui!");
-    }, 1000);
+    }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Nomor DANA berhasil disalin!");
   };
+
+  if (isLoading || !walletData) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
@@ -219,7 +229,7 @@ export default function DompetKOLPage() {
                   </p>
                 </div>
                 <p className="text-base font-bold text-[#1B1B1B]">
-                  {walletData.danaName}
+                  {walletData.danaName || "Belum diisi"}
                 </p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -230,16 +240,18 @@ export default function DompetKOLPage() {
                       Nomor HP DANA
                     </p>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(walletData.danaPhone)}
-                    className="p-1 text-[#4F619B] hover:bg-[#4F619B]/10 rounded transition-colors"
-                    title="Salin Nomor"
-                  >
-                    <Copy size={14} />
-                  </button>
+                  {walletData.danaPhone && (
+                    <button
+                      onClick={() => copyToClipboard(walletData.danaPhone)}
+                      className="p-1 text-[#4F619B] hover:bg-[#4F619B]/10 rounded transition-colors"
+                      title="Salin Nomor"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  )}
                 </div>
                 <p className="text-base font-bold text-[#233982] font-mono">
-                  {walletData.danaPhone}
+                  {walletData.danaPhone || "-"}
                 </p>
               </div>
             </div>
@@ -271,29 +283,41 @@ export default function DompetKOLPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {transactions.map((trx) => (
-                    <tr
-                      key={trx.id}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-sm text-[#1B1B1B]">
-                        {trx.date}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-[#1B1B1B]">
-                        {trx.taskTitle}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-[11px] font-bold uppercase tracking-wide border border-green-100">
-                          <ArrowDownLeft size={12} /> Reward
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-sm font-bold text-green-600">
-                          + {formatRupiah(trx.amount)}
-                        </span>
+                  {transactions.length > 0 ? (
+                    transactions.map((trx) => (
+                      <tr
+                        key={trx.id}
+                        className="hover:bg-gray-50/50 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm text-[#1B1B1B]">
+                          {trx.date}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-[#1B1B1B]">
+                          {trx.taskTitle}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-[11px] font-bold uppercase tracking-wide border border-green-100">
+                            <ArrowDownLeft size={12} /> Reward
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-bold text-green-600">
+                            + {formatRupiah(trx.amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-8 text-center text-sm text-[#C4C4C4]"
+                      >
+                        Belum ada riwayat pendapatan. Selesaikan task untuk
+                        mulai menghasilkan!
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>

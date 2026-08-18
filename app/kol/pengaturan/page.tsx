@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   User,
@@ -13,8 +13,10 @@ import {
   EyeOff,
   Loader2,
   Wallet,
+  // Instagram,
+  Video,
 } from "lucide-react";
-import SidebarKOL from "@/components/kol/SidebarKOL"; // Sesuaikan path
+import SidebarKOL from "@/components/kol/SidebarKOL";
 import toast from "react-hot-toast";
 
 // --- Komponen Input Field Kustom ---
@@ -73,22 +75,23 @@ const InputField = ({
 export default function PengaturanKOLPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // State Show/Hide Password
   const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
 
-  // State Form Data (Dummy Data)
   const [profile, setProfile] = useState({
-    name: "Rina Kartika",
-    email: "rina@mediapelajar.id",
+    name: "",
+    email: "",
     role: "KOL",
+    instagramUsername: "",
+    tiktokUsername: "",
   });
 
   const [danaWallet, setDanaWallet] = useState({
-    accountName: "Rina Kartika Sari",
-    phoneNumber: "081234567890",
+    accountName: "",
+    phoneNumber: "",
   });
 
   const [passwords, setPasswords] = useState({
@@ -96,6 +99,35 @@ export default function PengaturanKOLPage() {
     newPass: "",
     confirmPass: "",
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/kol/profile");
+        const result = await res.json();
+        if (result.success) {
+          setProfile({
+            name: result.data.profile.name || "",
+            email: result.data.profile.email || "",
+            role: result.data.profile.role || "KOL",
+            instagramUsername: result.data.profile.instagramUsername || "",
+            tiktokUsername: result.data.profile.tiktokUsername || "",
+          });
+          setDanaWallet({
+            accountName: result.data.wallet.accountName || "",
+            phoneNumber: result.data.wallet.phoneNumber || "",
+          });
+        } else {
+          toast.error(result.error || "Gagal memuat data profil");
+        }
+      } catch (error) {
+        toast.error("Gagal memuat data profil");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleProfileChange = (field: string, val: string) => {
     setProfile({ ...profile, [field]: val });
@@ -109,7 +141,7 @@ export default function PengaturanKOLPage() {
     setPasswords({ ...passwords, [field]: val });
   };
 
-  const handleSaveAll = (e: React.FormEvent) => {
+  const handleSaveAll = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validasi Password
@@ -133,46 +165,85 @@ export default function PengaturanKOLPage() {
       toast.error("Nama dan Nomor DANA wajib diisi!");
       return;
     }
+    if (!/^\d{10,13}$/.test(danaWallet.phoneNumber.replace(/\D/g, ""))) {
+      toast.error("Nomor HP DANA tidak valid (harus 10-13 digit angka)!");
+      return;
+    }
+
+    // BARU: Validasi Username Sosmed (Wajib untuk KOL)
+    if (!profile.instagramUsername.trim()) {
+      toast.error("Username Instagram wajib diisi!");
+      return;
+    }
+    if (!profile.tiktokUsername.trim()) {
+      toast.error("Username TikTok wajib diisi!");
+      return;
+    }
 
     setIsSaving(true);
 
-    // Simulasi API Call
-    setTimeout(() => {
-      setIsSaving(false);
-      toast.success("Profil dan Akun DANA berhasil diperbarui!");
+    try {
+      const res = await fetch("/api/kol/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profile.name,
+          email: profile.email,
+          instagramUsername: profile.instagramUsername,
+          tiktokUsername: profile.tiktokUsername,
+          oldPassword: passwords.oldPass,
+          newPassword: passwords.newPass,
+          danaName: danaWallet.accountName,
+          danaPhone: danaWallet.phoneNumber,
+        }),
+      });
 
-      // Reset password fields
-      setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
-    }, 1000);
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Profil dan Akun DANA berhasil diperbarui!");
+        setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
+      } else {
+        toast.error(result.error || "Gagal memperbarui profil");
+      }
+    } catch (error) {
+      toast.error("Terjadi kesalahan pada server");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8faf9] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#233982]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8faf9] font-sans text-[#1B1B1B] overflow-x-hidden flex">
-      {/* --- SIDEBAR --- */}
       <SidebarKOL
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
       />
 
-      {/* --- MAIN CONTENT --- */}
       <main
         className={`flex-1 transition-all duration-300 ${isSidebarOpen ? "ml-[280px]" : "ml-[80px]"}`}
       >
-        {/* Top Header */}
         <header className="h-20 bg-[#FFFFFF]/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-30 px-8 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-[#1B1B1B]">
               Pengaturan Akun
             </h2>
             <p className="text-[11px] text-[#C4C4C4] font-semibold uppercase tracking-wider">
-              Kelola identitas dan akun DANA untuk pencairan reward
+              Kelola identitas, akun DANA, dan sosial media Anda
             </p>
           </div>
         </header>
 
         <div className="p-8 max-w-[900px] mx-auto space-y-8 pb-24">
           <form onSubmit={handleSaveAll}>
-            {/* 1. Informasi Profil Dasar */}
+            {/* 1. Informasi Profil Dasar & Sosmed */}
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -184,10 +255,10 @@ export default function PengaturanKOLPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-[#1B1B1B]">
-                    Informasi Profil
+                    Informasi Profil & Sosial Media
                   </h3>
                   <p className="text-xs text-[#C4C4C4]">
-                    Data identitas akun KOL Anda
+                    Data identitas dan akun media sosial Anda (Wajib diisi)
                   </p>
                 </div>
               </div>
@@ -212,6 +283,29 @@ export default function PengaturanKOLPage() {
                   }
                   placeholder="contoh@email.com"
                 />
+
+                {/* BARU: Input Instagram */}
+                <InputField
+                  // icon={Instagram}
+                  label="Username Instagram"
+                  value={profile.instagramUsername}
+                  onChange={(e: any) =>
+                    handleProfileChange("instagramUsername", e.target.value)
+                  }
+                  placeholder="contoh: @rinakartika (tanpa @)"
+                />
+
+                {/* BARU: Input TikTok */}
+                <InputField
+                  icon={Video}
+                  label="Username TikTok"
+                  value={profile.tiktokUsername}
+                  onChange={(e: any) =>
+                    handleProfileChange("tiktokUsername", e.target.value)
+                  }
+                  placeholder="contoh: @rinakartika (tanpa @)"
+                />
+
                 <InputField
                   icon={User}
                   label="Peran (Role)"
@@ -223,7 +317,7 @@ export default function PengaturanKOLPage() {
               </div>
             </motion.section>
 
-            {/* 2. Akun DANA (Khusus KOL) */}
+            {/* 2. Akun DANA */}
             <motion.section
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -340,10 +434,9 @@ export default function PengaturanKOLPage() {
             >
               <button
                 type="button"
-                onClick={() => {
-                  setPasswords({ oldPass: "", newPass: "", confirmPass: "" });
-                  // Reset ke data awal jika perlu
-                }}
+                onClick={() =>
+                  setPasswords({ oldPass: "", newPass: "", confirmPass: "" })
+                }
                 className="px-6 py-3 text-sm font-bold text-[#C4C4C4] hover:text-[#1B1B1B] bg-white border border-gray-200 rounded-xl transition-all hover:bg-gray-50"
               >
                 Batal
@@ -355,13 +448,11 @@ export default function PengaturanKOLPage() {
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="animate-spin" size={16} />
-                    Menyimpan...
+                    <Loader2 className="animate-spin" size={16} /> Menyimpan...
                   </>
                 ) : (
                   <>
-                    <Save size={16} />
-                    Simpan Perubahan
+                    <Save size={16} /> Simpan Perubahan
                   </>
                 )}
               </button>

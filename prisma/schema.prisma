@@ -6,6 +6,7 @@ datasource db {
   provider = "mysql"
 }
 
+// --- ENUMS (Ditaruh di atas agar aman dari error parsing) ---
 enum Role {
   ADMIN
   MEMBER
@@ -27,46 +28,90 @@ enum CommentStatus {
   REJECTED
   HIDDEN
 }
+
 enum TaskStatus {
   ACTIVE
-  COMPLETED // Jika quota sudah terpenuhi
+  COMPLETED
   CANCELLED
 }
 
-model User {
-  id          String      @id @default(cuid())
-  name        String
-  email       String      @unique
-  password    String
-  role        Role        @default(MEMBER)
-  isVerified  Boolean     @default(false)
-  isSuspended Boolean     @default(false)
-
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  otps        Otp[]
-  articles    Article[]
-  comments    Comment[]
-  notifications Notification[] // <-- TAMBAHKAN INI
-
-  // Relasi KOL
-  kolWallet       KOLWallet?
-  taskSubmissions TaskSubmission[]
-  payoutRequests PayoutRequest[]
+enum SubmissionStatus {
+  CLAIMED
+  PENDING
+  APPROVED
+  REJECTED
 }
 
+enum PayoutStatus {
+  PENDING
+  PAID
+}
 
-// <-- TAMBAHKAN MODEL BARU INI DI BAGIAN BAWAH -->
+// --- MODELS ---
+model User {
+  id                String      @id @default(cuid())
+  name              String
+  email             String      @unique
+  password          String
+  role              Role        @default(MEMBER)
+  isVerified        Boolean     @default(false)
+  isSuspended       Boolean     @default(false)
+
+  // BARU: Username Sosial Media (Wajib diisi untuk KOL)
+  instagramUsername String?     
+  tiktokUsername    String?     
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  otps              Otp[]
+  articles          Article[]
+  comments          Comment[]
+  notifications     Notification[]
+  
+  // Relasi KOL
+  kolWallet         KOLWallet?
+  taskSubmissions   TaskSubmission[]
+  payoutRequests    PayoutRequest[]
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?
+  content     String
+  coverImage  String?       @db.LongText
+  status      ArticleStatus @default(DRAFT)
+  views       Int           @default(0)
+  
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  
+  tags        Tag[]         @relation("ArticleTags")
+  comments    Comment[]
+  notifications Notification[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status])
+  @@index([authorId])
+  @@index([categoryId])
+}
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  articleId String?  // Opsional, jika notifikasi terkait artikel spesifik
+  articleId String?
   article   Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
   
-  type      String   // "revision", "success", "info"
+  type      String
   title     String
   message   String
   isRead    Boolean  @default(false)
@@ -76,6 +121,7 @@ model Notification {
   @@index([userId])
   @@index([isRead])
 }
+
 model Otp {
   id         String   @id @default(cuid())
   email      String
@@ -99,52 +145,13 @@ model Category {
   articles    Article[]
 }
 
-model Article {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  excerpt     String?
-  content     String
-  coverImage  String?       @db.LongText
-  status      ArticleStatus @default(DRAFT)
-  views       Int           @default(0)
-  
-  authorId    String
-  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
-  categoryId  String
-  category    Category      @relation(fields: [categoryId], references: [id])
-  
-  tags        ArticleTag[]
-  comments    Comment[]
-  notifications Notification[]
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@index([status])
-  @@index([authorId])
-  @@index([categoryId])
-}
-
 model Tag {
   id          String    @id @default(cuid())
   name        String    @unique
   slug        String    @unique
   createdAt   DateTime  @default(now())
   
-  articles    ArticleTag[]
-}
-
-// Tabel penghubung baru, PUNYA primary key sendiri
-model ArticleTag {
-  id        String  @id @default(cuid())
-  articleId String
-  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  tagId     String
-  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@unique([articleId, tagId])
+  articles    Article[] @relation("ArticleTags")
 }
 
 model Comment {
@@ -167,7 +174,7 @@ model Comment {
 
 model DailyTraffic {
   id        String   @id @default(cuid())
-  date      DateTime @unique // Format: YYYY-MM-DD
+  date      DateTime @unique
   views     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -175,32 +182,28 @@ model DailyTraffic {
   @@index([date])
 }
 
-// ... (model User, Article, dll tetap sama) ...
-
-// Model Dompet Digital KOL
 model KOLWallet {
   id          String   @id @default(cuid())
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountName String   // Nama pemilik rekening/DANA
-  phoneNumber String   // Nomor HP DANA
-  balance     Int      @default(0) // Saldo dalam Rupiah (misal: 50000)
+  accountName String
+  phoneNumber String
+  balance     Int      @default(0)
   updatedAt   DateTime @updatedAt
 }
 
 model Task {
   id          String      @id @default(cuid())
-  title       String      // Judul task (misal: "Buat Konten TikTok Edukasi")
-  description String      // Detail pengerjaan
-  reward      Int         // Bayaran per KOL (misal: 20000)
-  quota       Int         // Kuota maksimal KOL (misal: 50)
-  claimed     Int         @default(0) // Berapa KOL yang sudah mengambil/mengerjakan
+  title       String
+  description String
+  reward      Int
+  quota       Int
+  claimed     Int         @default(0)
   status      TaskStatus  @default(ACTIVE)
   createdAt   DateTime    @default(now())
   
   submissions TaskSubmission[]
 }
-
 
 model TaskSubmission {
   id          String           @id @default(cuid())
@@ -208,23 +211,11 @@ model TaskSubmission {
   task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
   kolId       String
   kol         User             @relation(fields: [kolId], references: [id], onDelete: Cascade)
-  proofLink   String           // Link bukti (Google Drive, TikTok, Instagram, dll)
-  status      SubmissionStatus @default(PENDING)
-  feedback    String?          // Catatan dari Admin jika ditolak
+  proofLink   String
+  status      SubmissionStatus @default(CLAIMED) // Default diubah ke CLAIMED agar sesuai flow
+  feedback    String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-}
-
-enum SubmissionStatus {
-  CLAIMED
-  PENDING    // Menunggu review Admin
-  APPROVED   // Disetujui, saldo masuk ke dompet KOL
-  REJECTED   // Ditolak, perlu revisi
-}
-
-enum PayoutStatus {
-  PENDING
-  PAID
 }
 
 model PayoutRequest {
@@ -237,5 +228,5 @@ model PayoutRequest {
   processedAt DateTime?
 
   @@index([kolId])
-
+  @@index([status])
 }
